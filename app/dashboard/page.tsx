@@ -3,8 +3,34 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MessageSquare, Send, ArrowUpRight, Clock, Target } from "lucide-react";
+import { useProjects } from "@/lib/projects-context";
+import Link from "next/link";
 
 export default function DashboardPage() {
+  const { projects, isLoading } = useProjects();
+
+  // If no projects exist and not loading, show empty state with CTA
+  if (!isLoading && projects.length === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-neutral-50 to-white flex items-center justify-center p-4">
+        <div className="max-w-md text-center">
+          <div className="mb-6">
+            <div className="h-20 w-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto">
+              <MessageSquare className="h-10 w-10 text-blue-600" />
+            </div>
+          </div>
+          <h1 className="font-mono text-3xl font-bold mb-2">Welcome to BrandPilot</h1>
+          <p className="text-neutral-600 mb-8">Let's set up your brand profile to get started with AI-powered automation</p>
+          <Link href="/onboarding">
+            <Button className="bg-blue-600 hover:bg-blue-700 text-white font-mono text-sm">
+              Start Setup
+            </Button>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8">
       {/* Header */}

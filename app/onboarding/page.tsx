@@ -92,33 +92,103 @@ export default function OnboardingPage() {
     }
   };
 
-  const handleFinish = () => {
-    const fullConfig = {
-      website,
-      // Scraped comprehensive data
-      scrapedSummary,
-      scrapedInsights,
-      scrapedRawData,
-      // User responses to suggested questions
-      questionResponses,
-      // Step 3 detailed business info
-      businessType,
-      products,
-      uniqueValue,
-      brandValues,
-      brandPersonality,
-      targetMarket,
-      communicationStyle,
-      contentPillars,
-      competitors,
-      differentiation,
-      successMetrics,
-      additionalInfo,
-    };
+  const handleFinish = async () => {
+    try {
+      // Get Supabase client
+      const { createSupabaseClient } = await import("@/lib/supabase");
+      const supabase = createSupabaseClient();
 
-    localStorage.setItem("brandpilot_onboarded", "true");
-    localStorage.setItem("brandpilot_config", JSON.stringify(fullConfig));
-    router.push("/dashboard");
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        alert("Please log in to continue");
+        router.push("/login");
+        return;
+      }
+
+      // FIRST: Ensure user exists in app_user table
+      const { data: existingUser } = await (supabase as any)
+        .from("app_user")
+        .select("id")
+        .eq("id", user.id)
+        .single();
+
+      if (!existingUser) {
+        // Create user profile if it doesn't exist
+        const { error: userError } = await (supabase as any)
+          .from("app_user")
+          .insert({
+            id: user.id,
+            email: user.email,
+            created_at: new Date().toISOString(),
+          });
+
+        if (userError) {
+          console.error("Failed to create user profile:", userError);
+          alert("Failed to create user profile. Please try again.");
+          return;
+        }
+      }
+
+      // Extract brand name from website or scraped data (limit to 255 chars)
+      const rawBrandName = scrapedSummary.split("\n")[0] || website.replace(/https?:\/\/(www\.)?/, "").split(".")[0];
+      const brandName = rawBrandName.substring(0, 255); // Limit to 255 characters
+      const projectName = brandName || "My Brand";
+
+      // Create brand_agent (project) in database
+      // Include all fields collected during onboarding
+      const projectPayload = {
+        user_id: user.id,
+        name: projectName.substring(0, 255), // Ensure name is also within limit
+        brand_name: brandName,
+        description: scrapedSummary || businessType || "",
+        website: website.substring(0, 255), // Limit website URL too
+        
+        // Scraped data from website analysis
+        scraped_summary: scrapedSummary || null,
+        scraped_insights: scrapedInsights.length > 0 ? JSON.stringify(scrapedInsights) : null,
+        scraped_raw_data: Object.keys(scrapedRawData).length > 0 ? JSON.stringify(scrapedRawData) : null,
+        
+        // Comprehensive business info from Step 3
+        business_type: businessType || null,
+        products: products || null,
+        unique_value: uniqueValue || null,
+        brand_values: brandValues || null,
+        target_market: targetMarket || null,
+        communication_style: communicationStyle || null,
+        content_pillars: contentPillars || null,
+        competitors: competitors || null,
+        differentiation: differentiation || null,
+        success_metrics: successMetrics || null,
+        additional_info: additionalInfo || null,
+        
+        // Question responses from Step 2 (stored as JSONB)
+        question_responses: Object.keys(questionResponses).length > 0 ? questionResponses : null,
+      };
+
+      const { data: projectData, error: projectError } = await (supabase
+        .from("brand_agent")
+        .insert([projectPayload] as any)
+        .select()
+        .single() as any);
+
+      if (projectError) {
+        console.error("Failed to create project:", projectError);
+        alert("Failed to save project. Please try again.");
+        return;
+      }
+
+      console.log("✅ Project created:", projectData);
+
+      // Mark onboarding as complete
+      localStorage.setItem("brandpilot_onboarded", "true");
+
+      // Force a full page reload to refresh the projects list
+      window.location.href = "/dashboard";
+    } catch (error) {
+      console.error("Error completing onboarding:", error);
+      alert("An error occurred. Please try again.");
+    }
   };
 
   const progressPercentage = (currentStep / TOTAL_STEPS) * 100;

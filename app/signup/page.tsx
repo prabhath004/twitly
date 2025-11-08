@@ -12,8 +12,12 @@ import { createSupabaseClient } from "@/lib/supabase";
 
 export default function SignupPage() {
   const router = useRouter();
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -21,6 +25,43 @@ export default function SignupPage() {
     e.preventDefault();
     setLoading(true);
     setError("");
+
+    // Validation
+    if (!firstName.trim()) {
+      setError("First name is required");
+      setLoading(false);
+      return;
+    }
+
+    if (!lastName.trim()) {
+      setError("Last name is required");
+      setLoading(false);
+      return;
+    }
+
+    if (!phoneNumber.trim()) {
+      setError("Phone number is required");
+      setLoading(false);
+      return;
+    }
+
+    if (!email.trim()) {
+      setError("Email is required");
+      setLoading(false);
+      return;
+    }
+
+    if (password.length < 6) {
+      setError("Password must be at least 6 characters");
+      setLoading(false);
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError("Passwords do not match");
+      setLoading(false);
+      return;
+    }
 
     try {
       const supabase = createSupabaseClient();
@@ -34,10 +75,14 @@ export default function SignupPage() {
       if (signUpError) throw signUpError;
 
       if (data.user) {
-        // Create user profile in app_user table
+        // Create user profile in app_user table with full name and phone
         const userProfile = {
           id: data.user.id,
           email: data.user.email || email,
+          first_name: firstName,
+          last_name: lastName,
+          phone_number: phoneNumber,
+          full_name: `${firstName} ${lastName}`,
           created_at: new Date().toISOString(),
         };
 
@@ -49,8 +94,8 @@ export default function SignupPage() {
           console.error("Profile creation error:", profileError);
         }
 
-        // Success! Go to onboarding
-        router.push("/onboarding");
+        // Success! Go to dashboard
+        router.push("/dashboard");
       }
     } catch (err: any) {
       setError(err.message || "Failed to sign up. Please try again.");
@@ -82,6 +127,53 @@ export default function SignupPage() {
                 {error}
               </div>
             )}
+
+            {/* First Name and Last Name */}
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="firstName" className="font-mono">First Name</Label>
+                <Input
+                  id="firstName"
+                  type="text"
+                  placeholder="John"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  required
+                  disabled={loading}
+                  className="font-mono"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName" className="font-mono">Last Name</Label>
+                <Input
+                  id="lastName"
+                  type="text"
+                  placeholder="Doe"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                  required
+                  disabled={loading}
+                  className="font-mono"
+                />
+              </div>
+            </div>
+
+            {/* Phone Number */}
+            <div className="space-y-2">
+              <Label htmlFor="phoneNumber" className="font-mono">Phone Number</Label>
+              <Input
+                id="phoneNumber"
+                type="tel"
+                placeholder="+1 (555) 000-0000"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                required
+                disabled={loading}
+                className="font-mono"
+              />
+            </div>
+
+            {/* Email */}
             <div className="space-y-2">
               <Label htmlFor="email" className="font-mono">Email</Label>
               <Input
@@ -95,6 +187,8 @@ export default function SignupPage() {
                 className="font-mono"
               />
             </div>
+
+            {/* Password and Confirm Password */}
             <div className="space-y-2">
               <Label htmlFor="password" className="font-mono">Password</Label>
               <Input
@@ -108,7 +202,24 @@ export default function SignupPage() {
                 minLength={6}
                 className="font-mono"
               />
+              <p className="text-xs text-neutral-500 font-mono">At least 6 characters</p>
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword" className="font-mono">Confirm Password</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                placeholder="••••••••"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                required
+                disabled={loading}
+                minLength={6}
+                className="font-mono"
+              />
+            </div>
+
             <Button
               type="submit"
               className="w-full bg-[#1D9BF0] hover:bg-[#1a8cd8] font-mono"

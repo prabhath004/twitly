@@ -451,5 +451,7 @@ For issues, questions, or contributions:
 
 ---
 
+## Future: Youtube, Tiktok, Discord, 
+
 **Built with ❤️ for the BrandPilot project**
 

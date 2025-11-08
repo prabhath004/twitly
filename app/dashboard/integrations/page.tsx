@@ -157,7 +157,7 @@ export default function IntegrationsPage() {
           const integrationSlug = String(conn.integrationSlug || "").toLowerCase();
           const appName = String(conn.appName || "").toLowerCase();
           const appUniqueId = String(conn.appUniqueId || "").toLowerCase();
-          const integrationId = String(conn.integrationId || "").toLowerCase();
+          const integrationId = String((conn as any).integrationId || "").toLowerCase();
           
           console.log(`🔗 [UI] Processing connection:`, {
             id: conn.id,

@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
       throw new Error("Unable to find Twitter posting tool. Please reconnect Twitter with tweet.write permissions.");
     }
     
-    const toolName = postingTool.function?.name || postingTool.name;
+    const toolName = (postingTool as any).function?.name || (postingTool as any).name;
     console.log(`✅ [POST TWEET] Found posting tool: ${toolName}`);
     console.log(`📡 [POST TWEET] Posting tweet...`);
     console.log(`   Connected Account: ${twitterConnection.id}`);

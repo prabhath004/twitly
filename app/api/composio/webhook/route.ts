@@ -79,7 +79,9 @@ export async function POST(request: NextRequest) {
       // Clean up old events (keep only last 1000)
       if (recentEvents.size > 1000) {
         const firstKey = recentEvents.keys().next().value;
-        recentEvents.delete(firstKey);
+        if (firstKey !== undefined) {
+          recentEvents.delete(firstKey);
+        }
       }
     }
 

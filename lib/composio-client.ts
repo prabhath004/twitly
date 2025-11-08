@@ -45,7 +45,7 @@ export async function initiateConnection(
     userId,
     authConfigId,
     {
-      redirectUrl: callbackUrl || `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/integrations?connection=success`,
+      callbackUrl: callbackUrl || `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/integrations?connection=success`,
     }
   );
 
@@ -85,32 +85,33 @@ export async function getUserConnections(userId: string) {
         console.log(`📦 Full object:`, JSON.stringify(fullConn, null, 2));
         
         // Extract integration name - it's an object with a slug property!
-        const integrationSlug = fullConn.integration?.slug || fullConn.integration?.name;
-        
-        const integrationName = 
+        const connAny = fullConn as any;
+        const integrationSlug = connAny.integration?.slug || connAny.integration?.name;
+
+        const integrationName =
           integrationSlug ||
-          fullConn.integrationId ||
-          fullConn.appName ||
-          fullConn.appUniqueId ||
-          fullConn.app?.name ||
-          fullConn.app?.uniqueId ||
-          fullConn.appId ||
-          fullConn.toolkit ||
+          connAny.integrationId ||
+          connAny.appName ||
+          connAny.appUniqueId ||
+          connAny.app?.name ||
+          connAny.app?.uniqueId ||
+          connAny.appId ||
+          fullConn.toolkit?.slug ||
           "unknown";
-        
+
         console.log(`✅ Detected integration: "${integrationName}"`);
         console.log(`━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`);
-        
+
         return {
           id: fullConn.id,
           integration: integrationName,
           integrationSlug: integrationSlug,
           status: fullConn.status,
           createdAt: fullConn.createdAt,
-          memberInfo: fullConn.memberInfo || fullConn.member || {},
-          appName: fullConn.appName,
-          appUniqueId: fullConn.appUniqueId,
-          integrationId: fullConn.integrationId,
+          memberInfo: connAny.memberInfo || connAny.member || {},
+          appName: connAny.appName,
+          appUniqueId: connAny.appUniqueId,
+          integrationId: connAny.integrationId,
         };
       } catch (error: any) {
         console.error(`❌ Error getting details for connection ${conn.id}:`, error.message);

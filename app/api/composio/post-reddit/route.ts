@@ -143,7 +143,7 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    const toolName = postingTool.function?.name || postingTool.name;
+    const toolName = (postingTool as any).function?.name || (postingTool as any).name;
     console.log(`✅ [POST REDDIT] Found posting tool: ${toolName}`);
     console.log(`📡 [POST REDDIT] Posting to Reddit...`);
     console.log(`   Connected Account: ${redditConnection.id}`);

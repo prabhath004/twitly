@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useProjects } from "@/lib/projects-context";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,11 +9,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Globe, Sparkles, Shield, Plus, Trash2, Edit2 } from "lucide-react";
+import { SummarizedText } from "@/components/summarized-text";
 
 export default function ProjectsPage() {
-  const { projects, currentProjectId, setCurrentProject, createProject, updateProject } = useProjects();
-  const [showNewForm, setShowNewForm] = useState(false);
-  const [newProjectName, setNewProjectName] = useState("");
+  const router = useRouter();
+  const { projects, currentProjectId, setCurrentProject, updateProject } = useProjects();
   const [editingProjectId, setEditingProjectId] = useState<string | null>(null);
   const [editingTab, setEditingTab] = useState<"brand" | "persona" | "safety">("brand");
 
@@ -28,12 +29,8 @@ export default function ProjectsPage() {
   const [editMonitorReddit, setEditMonitorReddit] = useState(true);
   const [editDailyLimit, setEditDailyLimit] = useState(30);
 
-  const handleCreateProject = () => {
-    if (newProjectName.trim()) {
-      createProject(newProjectName);
-      setNewProjectName("");
-      setShowNewForm(false);
-    }
+  const handleNewProject = () => {
+    router.push("/onboarding");
   };
 
   const handleEditProject = (projectId: string) => {
@@ -79,79 +76,62 @@ export default function ProjectsPage() {
           <h1 className="font-mono text-3xl font-bold mb-1">Projects</h1>
           <p className="text-sm text-neutral-600">Manage your AI agent projects and configurations</p>
         </div>
-        {!showNewForm && (
-          <Button
-            onClick={() => setShowNewForm(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white font-mono text-sm"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            New Project
-          </Button>
-        )}
+        <Button
+          onClick={handleNewProject}
+          className="bg-blue-600 hover:bg-blue-700 text-white font-mono text-sm"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          New Project
+        </Button>
       </div>
-
-      {/* New Project Form */}
-      {showNewForm && (
-        <Card className="border border-blue-200 bg-blue-50">
-          <CardContent className="pt-6">
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="new-project-name" className="font-mono text-sm">
-                  Project Name
-                </Label>
-                <Input
-                  id="new-project-name"
-                  placeholder="e.g., Acme CRM, Tech Blog, Startup Updates"
-                  value={newProjectName}
-                  onChange={(e) => setNewProjectName(e.target.value)}
-                  className="font-mono mt-2"
-                  onKeyPress={(e) => {
-                    if (e.key === "Enter") {
-                      handleCreateProject();
-                    }
-                  }}
-                />
-              </div>
-              <div className="flex gap-2">
-                <Button
-                  onClick={handleCreateProject}
-                  className="bg-blue-600 hover:bg-blue-700 text-white font-mono text-sm"
-                >
-                  Create Project
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setShowNewForm(false);
-                    setNewProjectName("");
-                  }}
-                  className="font-mono text-sm"
-                >
-                  Cancel
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Projects Grid */}
       <div className="grid gap-6">
-        {projects.map((project) => (
-          <Card key={project.id} className="border border-neutral-200">
-            <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-4">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
-                  <CardTitle className="font-mono text-xl">{project.name}</CardTitle>
-                  {currentProjectId === project.id && (
-                    <Badge className="bg-blue-100 text-blue-800 font-mono text-xs">Active</Badge>
-                  )}
+        {projects.filter((project) => project.id === currentProjectId).length === 0 ? (
+          <Card className="border border-neutral-200">
+            <CardContent className="py-12 text-center">
+              <p className="font-mono text-neutral-600 mb-4">
+                {projects.length === 0 
+                  ? "No projects yet. Create your first project to get started."
+                  : "Select a project from the dropdown above to view details."}
+              </p>
+              {projects.length === 0 && (
+                <Button
+                  onClick={handleNewProject}
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-mono text-sm"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create First Project
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        ) : (
+          projects
+            .filter((project) => project.id === currentProjectId)
+            .map((project) => (
+            <Card key={project.id} className="border border-neutral-200">
+              <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-3 mb-2">
+                    <CardTitle className="font-mono text-xl">
+                      <SummarizedText
+                        text={project.name}
+                        maxLength={50}
+                      />
+                    </CardTitle>
+                    {currentProjectId === project.id && (
+                      <Badge className="bg-blue-100 text-blue-800 font-mono text-xs">Active</Badge>
+                    )}
+                  </div>
+                  <CardDescription className="font-mono">
+                    <SummarizedText
+                      text={project.settings.description || "No description"}
+                      maxLength={150}
+                    />
+                  </CardDescription>
                 </div>
-                <CardDescription className="font-mono">
-                  {project.settings.description || "No description"}
-                </CardDescription>
-              </div>
-            </CardHeader>
+              </CardHeader>
 
             {editingProjectId === project.id ? (
               <CardContent className="space-y-6">
@@ -364,7 +344,9 @@ export default function ProjectsPage() {
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
                   <div>
                     <p className="text-xs text-neutral-600 font-mono">Brand Name</p>
-                    <p className="font-mono font-semibold">{project.settings.brandName}</p>
+                    <p className="font-mono font-semibold">
+                      <SummarizedText text={project.settings.brandName || ""} maxLength={50} />
+                    </p>
                   </div>
                   <div>
                     <p className="text-xs text-neutral-600 font-mono">Persona</p>
@@ -413,7 +395,7 @@ export default function ProjectsPage() {
               </CardContent>
             )}
           </Card>
-        ))}
+        )))}
       </div>
     </div>
   );

@@ -302,11 +302,13 @@ export async function checkUserConnections(userId: string) {
   });
 
   const hasTwitter = connections.items.some((conn) =>
-    conn.integrationId.toLowerCase().includes("twitter")
+    (conn as any).integrationId?.toLowerCase().includes("twitter") ||
+    conn.toolkit?.slug?.toLowerCase().includes("twitter")
   );
 
   const hasReddit = connections.items.some((conn) =>
-    conn.integrationId.toLowerCase().includes("reddit")
+    (conn as any).integrationId?.toLowerCase().includes("reddit") ||
+    conn.toolkit?.slug?.toLowerCase().includes("reddit")
   );
 
   return {
