@@ -6,7 +6,7 @@ import { Home, Send, Settings, Plug, LogOut, Twitter, Activity } from "lucide-re
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
+import { ProjectSelector } from "@/components/ui/project-selector";
 
 export default function DashboardLayout({
   children,
@@ -19,6 +19,13 @@ export default function DashboardLayout({
       href: "/dashboard",
       icon: (
         <Home className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
+      ),
+    },
+    {
+      label: "Projects",
+      href: "/dashboard/projects",
+      icon: (
+        <Settings className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
     },
     {
@@ -40,13 +47,6 @@ export default function DashboardLayout({
       href: "/dashboard/integrations",
       icon: (
         <Plug className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
-      ),
-    },
-    {
-      label: "Settings",
-      href: "/dashboard/settings",
-      icon: (
-        <Settings className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
     },
     {
@@ -76,14 +76,15 @@ export default function DashboardLayout({
               ))}
             </div>
           </div>
-          <div className="flex flex-col gap-2">
-            <Badge className="bg-[#22C55E] font-mono text-xs justify-center">
-              Agent Active
-            </Badge>
-          </div>
         </SidebarBody>
       </Sidebar>
-      <div className="flex flex-1">
+      <div className="flex flex-1 flex-col">
+        <div className="p-4 md:p-6 border-b border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <h2 className="font-mono text-sm text-neutral-600">Project:</h2>
+            <ProjectSelector />
+          </div>
+        </div>
         <div className="p-2 md:p-10 rounded-tl-2xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 flex flex-col gap-2 flex-1 w-full h-full overflow-y-auto">
           {children}
         </div>
@@ -95,8 +96,8 @@ export default function DashboardLayout({
 export const Logo = () => {
   return (
     <Link
-      href="/dashboard"
-      className="font-normal flex space-x-2 items-center text-sm text-black py-1 relative z-20"
+      href="/"
+      className="font-normal flex space-x-2 items-center text-sm text-black py-1 relative z-20 hover:opacity-80 transition-opacity"
     >
       <Twitter className="h-6 w-6 text-[#1D9BF0] flex-shrink-0" />
       <motion.span
@@ -113,8 +114,8 @@ export const Logo = () => {
 export const LogoIcon = () => {
   return (
     <Link
-      href="/dashboard"
-      className="font-normal flex space-x-2 items-center text-sm text-black py-1 relative z-20"
+      href="/"
+      className="font-normal flex space-x-2 items-center text-sm text-black py-1 relative z-20 hover:opacity-80 transition-opacity"
     >
       <Twitter className="h-6 w-6 text-[#1D9BF0] flex-shrink-0" />
     </Link>

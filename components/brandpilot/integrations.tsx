@@ -1,14 +1,14 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Twitter, Code, Database, Workflow } from "lucide-react";
+import Image from "next/image";
 import { Card } from "@/components/ui/card";
 
 const integrations = [
-  { name: "X (Twitter)", icon: Twitter, color: "text-[#1D9BF0]" },
-  { name: "OpenAI/Claude", icon: Code, color: "text-purple-600" },
-  { name: "Supabase", icon: Database, color: "text-green-600" },
-  { name: "Next.js", icon: Workflow, color: "text-neutral-900" },
+  { name: "X (Twitter)", icon: "/icons/twitter.png" },
+  { name: "Reddit", icon: "/icons/reddit.png" },
+  { name: "WhatsApp", icon: "/icons/whatsapp.png" },
+  { name: "iMessage", icon: "/icons/messages.png" },
 ];
 
 export function Integrations() {
@@ -22,7 +22,7 @@ export function Integrations() {
           transition={{ duration: 0.6 }}
           className="text-center text-4xl font-mono font-bold mb-4"
         >
-          Built for Autonomy
+          Multi-Platform Publishing
         </motion.h2>
         <motion.p
           initial={{ opacity: 0, y: 20 }}
@@ -31,9 +31,9 @@ export function Integrations() {
           transition={{ delay: 0.2, duration: 0.6 }}
           className="text-center text-muted-foreground font-mono mb-12"
         >
-          Powered by safe LLM pipelines and modern infrastructure
+          Manage multiple projects with integrated platform connectors
         </motion.p>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-5xl mx-auto">
           {integrations.map((integration, index) => (
             <motion.div
               key={integration.name}
@@ -43,7 +43,13 @@ export function Integrations() {
               transition={{ delay: index * 0.1, duration: 0.4 }}
             >
               <Card className="p-6 flex flex-col items-center justify-center h-32 hover:shadow-lg transition-shadow">
-                <integration.icon className={`h-10 w-10 mb-3 ${integration.color}`} />
+                <Image
+                  src={integration.icon}
+                  alt={integration.name}
+                  width={50}
+                  height={50}
+                  className="mb-3 object-contain"
+                />
                 <p className="text-xs font-mono font-semibold text-center">
                   {integration.name}
                 </p>
