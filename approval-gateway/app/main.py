@@ -28,10 +28,63 @@ from app.imessage import (
     get_imessage_client,
     parse_imessage_command
 )
+from app.ai_chat import (
+    chat_with_ai,
+    is_ai_chat_request,
+    is_post_command,
+    is_generate_and_post
+)
+from app.brand_lookup import get_brand_for_imessage
+from app.post_approval import post_to_x
 
 
 # Background task for checking timeouts
 timeout_checker_task: Optional[asyncio.Task] = None
+imessage_watch_task: Optional[asyncio.Task] = None
+_last_watch_status: Optional[str] = None
+
+
+async def ensure_imessage_watch():
+    """Continuously ensure Photon is forwarding messages to our webhook."""
+    global _last_watch_status
+
+    if not settings.photon_base_url:
+        return
+
+    webhook_url = f"http://localhost:{settings.port}/webhooks/imessage"
+
+    while True:
+        try:
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                response = await client.post(
+                    f"{settings.photon_base_url}/watch/start",
+                    json={
+                        "webhookUrl": webhook_url,
+                        "webhookHeaders": {}
+                    }
+                )
+
+            if response.status_code == 200:
+                if _last_watch_status != "ok":
+                    print(f"✅ iMessage watching active (webhook: {webhook_url})")
+                _last_watch_status = "ok"
+                await asyncio.sleep(60)
+                continue
+
+            status_note = f"status_{response.status_code}"
+            if _last_watch_status != status_note:
+                print(
+                    f"⚠️  iMessage watch returned {response.status_code}: "
+                    f"{await response.aread()}"
+                )
+            _last_watch_status = status_note
+        except Exception as e:
+            error_note = f"error:{e}"
+            if _last_watch_status != error_note:
+                print(f"⚠️  Could not ensure iMessage watch: {e}")
+            _last_watch_status = error_note
+
+        await asyncio.sleep(10)
 
 
 async def check_timeouts():
@@ -88,7 +141,7 @@ async def check_timeouts():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan manager."""
-    global timeout_checker_task
+    global timeout_checker_task, imessage_watch_task
     
     # Startup
     print("🚀 Starting BrandPilot Approval Gateway...")
@@ -115,6 +168,7 @@ async def lifespan(app: FastAPI):
     if settings.photon_base_url:
         init_imessage_client(settings.photon_base_url)
         print("iMessage client initialized")
+        imessage_watch_task = asyncio.create_task(ensure_imessage_watch())
     else:
         print("iMessage client not configured")
     
@@ -129,13 +183,14 @@ async def lifespan(app: FastAPI):
     # Shutdown
     print("Shutting down...")
     
-    # Stop timeout checker
-    if timeout_checker_task:
-        timeout_checker_task.cancel()
-        try:
-            await timeout_checker_task
-        except asyncio.CancelledError:
-            pass
+    # Stop background tasks
+    for task in [timeout_checker_task, imessage_watch_task]:
+        if task:
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
     
     # Close connections
     await close_store()
@@ -400,82 +455,281 @@ async def imessage_webhook(request: Request):
     """
     Handle incoming iMessage messages from Photon iMessage Kit.
     
-    Processes approval commands (approve/edit/skip) and sends
-    decisions back to the core service.
+    Processes:
+    1. Approval commands (approve/edit/skip) - for pending approvals
+    2. AI chat requests (generate post, help me, etc.) - for generating new content
     """
     try:
         payload = await request.json()
     except:
         raise HTTPException(status_code=400, detail="Invalid JSON")
     
-    # Extract message details
-    from_user = payload.get("from", "")
-    message_text = payload.get("text", "").strip()
+    # Handle two possible payload formats:
+    # 1. Direct format: {"from": "...", "text": "..."}
+    # 2. Webhook format: {"event": "new_message", "message": {"sender": "...", "text": "..."}}
+    if "event" in payload and "message" in payload:
+        # Webhook format from iMessage bridge
+        message_data = payload.get("message", {})
+        from_user = message_data.get("sender", "")
+        message_text = message_data.get("text", "").strip()
+    else:
+        # Direct format
+        from_user = payload.get("from", "")
+        message_text = payload.get("text", "").strip()
     
-    # Parse command
+    print(f"📨 Received iMessage from {from_user}: {message_text}")
+    print(f"   Full payload: {payload}")
+    
+    # First, try to parse as approval command
     command = parse_imessage_command(message_text)
     
-    if not command:
-        return {"status": "ignored", "reason": "Invalid command format"}
+    if command:
+        # Handle approval command
+        candidate_id = command["candidate_id"]
+        action = command["action"]
+        edited_text = command["edited_text"]
+        
+        # Get candidate state
+        store = get_store()
+        state = await store.get_candidate_state(candidate_id)
+        
+        if not state:
+            # Not an approval command, might be AI chat
+            pass
+        elif state.state not in ["new", "prompted"]:
+            return {"status": "error", "reason": f"Candidate already {state.state}"}
+        else:
+            # Process approval
+            decider = f"imessage:{from_user}"
+            await store.update_state(candidate_id, action, decider=decider)
+            
+            latency_ms = int(
+                (datetime.now(timezone.utc) - state.created_at).total_seconds() * 1000
+            )
+            
+            final_text = edited_text if action == "edited" else state.candidate.proposed_text
+            if action == "rejected":
+                final_text = None
+            
+            decision = Decision(
+                id=candidate_id,
+                decision=action,
+                final_text=final_text,
+                decider=decider,
+                latency_ms=latency_ms
+            )
+            
+            await send_decision_to_core(decision)
+            
+            activity = ActivityEntry(
+                id=candidate_id,
+                brand_id=state.candidate.brand_id,
+                platform=state.candidate.platform,
+                proposed_text=state.candidate.proposed_text,
+                state=action,
+                created_at=state.created_at,
+                decided_at=datetime.now(timezone.utc),
+                decision=action,
+                final_text=final_text,
+                decider=decider,
+                latency_ms=latency_ms
+            )
+            
+            await store.log_activity(state.candidate.brand_id, activity)
+            
+            return {"status": "processed", "decision": action}
     
-    candidate_id = command["candidate_id"]
-    action = command["action"]
-    edited_text = command["edited_text"]
+    # Check if it's "generate and post" FIRST (before checking post command)
+    should_post = is_generate_and_post(message_text)
     
-    # Get candidate state
-    store = get_store()
-    state = await store.get_candidate_state(candidate_id)
+    # Check if it's a "post this" command (post last generated post)
+    # BUT only if it's NOT a generate and post command
+    if not should_post and is_post_command(message_text):
+        store = get_store()
+        last_post = await store.get_last_post(from_user)
+        
+        if not last_post:
+            imsg_client = get_imessage_client()
+            await imsg_client.send_message(
+                from_user,
+                "❌ No recent post found. Generate a post first with 'generate post about X'"
+            )
+            return {"status": "no_post", "message": "No last post found"}
+        
+        # Post the last generated post
+        brand_id = last_post.get("brand_id")
+        post_text = last_post.get("post_text")
+        
+        if not brand_id or not post_text:
+            imsg_client = get_imessage_client()
+            await imsg_client.send_message(
+                from_user,
+                "❌ Error: Invalid post data"
+            )
+            return {"status": "error", "reason": "Invalid post data"}
+        
+        try:
+            # Use brand_id as userId for Composio (same as Activity Feed does)
+            result = await post_to_x(brand_id, post_text)
+            
+            imsg_client = get_imessage_client()
+            if result.get("success"):
+                tweet_url = result.get("url", "Posted!")
+                response_msg = f"✅ Posted to X!\n\n{post_text}\n\n🔗 {tweet_url}"
+                print(f"📱 Sending iMessage response to {from_user}: {response_msg[:100]}...")
+                await imsg_client.send_message(from_user, response_msg)
+                print(f"✅ iMessage sent successfully")
+                return {"status": "posted", "url": tweet_url}
+            else:
+                error = result.get("error", "Unknown error")
+                await imsg_client.send_message(
+                    from_user,
+                    f"❌ Failed to post: {error}"
+                )
+                return {"status": "error", "reason": error}
+        except Exception as e:
+            imsg_client = get_imessage_client()
+            await imsg_client.send_message(
+                from_user,
+                f"❌ Error posting: {str(e)}"
+            )
+            return {"status": "error", "reason": str(e)}
     
-    if not state:
-        return {"status": "error", "reason": "Candidate not found"}
+    # Not an approval command - check if it's an AI chat request
+    # (should_post is already set above)
+    if is_ai_chat_request(message_text) or should_post:
+        print(f"🤖 Detected AI chat request: {message_text}")
+        print(f"   Should post: {should_post}")
+        
+        # Get brand info for this iMessage ID
+        print(f"🔍 Looking up brand for iMessage: {from_user}")
+        brand_info = await get_brand_for_imessage(from_user)
+        
+        if not brand_info:
+            print(f"❌ No brand found for {from_user}")
+            # No brand found - send helpful message
+            imsg_client = get_imessage_client()
+            await imsg_client.send_message(
+                from_user,
+                "🤖 Hi! I can help you generate posts, but I need to know which brand.\n\n"
+                "Make sure your brand has 'owner_imessage' set to your iMessage ID in the database.\n\n"
+                "Or try: 'generate post about [topic]' and I'll use your first active brand."
+            )
+            return {"status": "no_brand", "message": "No brand found for iMessage ID"}
+        
+        print(f"✅ Brand found: {brand_info.get('brand_name') or brand_info.get('name')} (ID: {brand_info.get('id')})")
+        
+        # Chat with AI
+        if not settings.xai_api_key:
+            imsg_client = get_imessage_client()
+            await imsg_client.send_message(
+                from_user,
+                "❌ AI chat not configured. Please set XAI_API_KEY in approval-gateway/.env"
+            )
+            return {"status": "error", "reason": "xAI API key not configured"}
+        
+        try:
+            ai_response = await chat_with_ai(
+                user_message=message_text,
+                brand_info=brand_info,
+                xai_api_key=settings.xai_api_key,
+                xai_model=settings.xai_model
+            )
+            
+            # Clean up the response - remove any extra text, ensure it's just the tweet
+            import re
+            # Remove quotes if present
+            if ai_response.startswith('"') and ai_response.endswith('"'):
+                ai_response = ai_response[1:-1]
+            
+            # Remove common prefixes
+            prefixes = [
+                "Here's a post:",
+                "Here's a social media post:",
+                "Here's your post:",
+                "Post:",
+                "Tweet:",
+            ]
+            for prefix in prefixes:
+                if ai_response.startswith(prefix):
+                    ai_response = ai_response[len(prefix):].strip()
+            
+            # Take first line only (in case AI added extra text)
+            ai_response = ai_response.split('\n')[0].strip()
+            
+            # Remove any trailing explanations
+            if "Feel free" in ai_response or "Should I post" in ai_response:
+                # Take everything before these phrases
+                for phrase in ["Feel free", "Should I post", "Let me know"]:
+                    if phrase in ai_response:
+                        ai_response = ai_response.split(phrase)[0].strip()
+            
+            # Ensure under 280 characters
+            if len(ai_response) > 280:
+                print(f"⚠️  Post is {len(ai_response)} chars, truncating to 280")
+                ai_response = ai_response[:277] + "..."
+            
+            print(f"✅ Cleaned post ({len(ai_response)} chars): {ai_response}")
+            
+            # Store the generated post
+            store = get_store()
+            await store.save_last_post(from_user, ai_response, brand_info.get("id"))
+            
+            # Send AI response back via iMessage
+            imsg_client = get_imessage_client()
+            
+            if should_post:
+                # Generate and post in one go
+                brand_id = brand_info.get("id")
+                print(f"📤 Posting to X with brand_id: {brand_id} (using as userId for Composio)")
+                try:
+                    result = await post_to_x(brand_id, ai_response)
+                    print(f"📤 Post result: {result}")
+                    if result.get("success"):
+                        tweet_url = result.get("url", "Posted!")
+                        response_msg = f"✅ Posted to X!\n\n{ai_response}\n\n🔗 {tweet_url}"
+                        print(f"📱 Sending iMessage response to {from_user}: {response_msg[:100]}...")
+                        await imsg_client.send_message(from_user, response_msg)
+                        print(f"✅ iMessage sent successfully")
+                    else:
+                        error_msg = result.get('error', 'Unknown error')
+                        print(f"❌ Post failed: {error_msg}")
+                        await imsg_client.send_message(
+                            from_user,
+                            f"❌ Failed to post:\n\n{ai_response}\n\nError: {error_msg}"
+                        )
+                except Exception as e:
+                    print(f"❌ Exception posting: {str(e)}")
+                    import traceback
+                    traceback.print_exc()
+                    await imsg_client.send_message(
+                        from_user,
+                        f"❌ Error posting:\n\n{ai_response}\n\nError: {str(e)}"
+                    )
+            else:
+                # Just generate, ask if they want to post
+                await imsg_client.send_message(
+                    from_user,
+                    f"🤖 {ai_response}\n\n💬 Reply 'post' or 'tweet' to post this!"
+                )
+            
+            return {"status": "ai_chat", "response": ai_response, "posted": should_post}
+            
+        except Exception as e:
+            print(f"Error in AI chat: {e}")
+            imsg_client = get_imessage_client()
+            await imsg_client.send_message(
+                from_user,
+                f"❌ Error: {str(e)}"
+            )
+            return {"status": "error", "reason": str(e)}
     
-    if state.state not in ["new", "prompted"]:
-        return {"status": "error", "reason": f"Candidate already {state.state}"}
-    
-    # Update state
-    decider = f"imessage:{from_user}"
-    await store.update_state(candidate_id, action, decider=decider)
-    
-    # Calculate latency
-    latency_ms = int(
-        (datetime.now(timezone.utc) - state.created_at).total_seconds() * 1000
-    )
-    
-    # Determine final text
-    final_text = edited_text if action == "edited" else state.candidate.proposed_text
-    if action == "rejected":
-        final_text = None
-    
-    # Create decision
-    decision = Decision(
-        id=candidate_id,
-        decision=action,
-        final_text=final_text,
-        decider=decider,
-        latency_ms=latency_ms
-    )
-    
-    # Send to core
-    await send_decision_to_core(decision)
-    
-    # Log activity
-    activity = ActivityEntry(
-        id=candidate_id,
-        brand_id=state.candidate.brand_id,
-        platform=state.candidate.platform,
-        proposed_text=state.candidate.proposed_text,
-        state=action,
-        created_at=state.created_at,
-        decided_at=datetime.now(timezone.utc),
-        decision=action,
-        final_text=final_text,
-        decider=decider,
-        latency_ms=latency_ms
-    )
-    
-    await store.log_activity(state.candidate.brand_id, activity)
-    
-    return {"status": "processed", "decision": action}
+    # Not a recognized command or AI chat
+    return {
+        "status": "ignored",
+        "reason": "Not an approval command or AI chat request",
+        "hint": "Try: 'approve cr_xxx', 'generate post about X', or 'help me with...'"
+    }
 
 
 @app.get("/activity")
@@ -503,4 +757,3 @@ async def get_activity(brand_id: str, limit: int = 50):
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=settings.port)
-

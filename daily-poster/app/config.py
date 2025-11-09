@@ -34,6 +34,11 @@ class Settings(BaseSettings):
     # API Base URL (for calling Next.js API endpoints)
     api_base_url: str = "http://localhost:3000"  # Default for local dev
     
+    # Approval mode (iMessage) - Optional
+    require_approval: bool = False  # Set to true to send for iMessage approval
+    approval_gateway_url: str = "http://localhost:8000"  # URL of approval-gateway service
+    owner_imessage: str = ""  # Your iMessage (Apple ID or phone number)
+    
     class Config:
         env_file = ".env"
         case_sensitive = False

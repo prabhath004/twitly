@@ -10,6 +10,9 @@ redis==5.2.0
 # HTTP client
 httpx==0.28.1
 
+# Supabase for brand lookup
+supabase==2.10.0
+
 # Twilio for WhatsApp
 twilio==9.3.7
 

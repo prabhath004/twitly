@@ -54,14 +54,22 @@ class iMessageClient:
         if candidate.risk_flags:
             message_text += f"\n\nRisks: {', '.join(candidate.risk_flags)}"
         
-        # Send message to Photon iMessage Kit sidecar
-        # Adjust this endpoint based on actual Photon kit API
+        await self.send_message(recipient, message_text)
+    
+    async def send_message(self, recipient: str, text: str) -> None:
+        """
+        Send a plain message via iMessage.
+        
+        Args:
+            recipient: Apple ID or phone number to send message to
+            text: Message text
+        """
         try:
             response = await self.http_client.post(
                 f"{self.base_url}/send",
                 json={
                     "recipient": recipient,
-                    "text": message_text
+                    "text": text
                 }
             )
             response.raise_for_status()

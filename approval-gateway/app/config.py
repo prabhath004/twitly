@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
     
     # Server
-    port: int = 8080
+    port: int = 8000
     
     # Redis
     redis_url: str = "redis://localhost:6379/0"
@@ -26,6 +26,14 @@ class Settings(BaseSettings):
     # Photon iMessage Kit
     photon_base_url: str = "http://localhost:5173"
     photon_to: str = ""  # Fallback default if candidate.owner_imessage not provided
+    
+    # xAI for AI Chat
+    xai_api_key: str = ""
+    xai_model: str = "grok-3"
+    
+    # Supabase for brand lookup
+    supabase_url: str = ""
+    supabase_service_role_key: str = ""
     
     # Security
     webhook_signing_secret: str = "change-me-in-production"

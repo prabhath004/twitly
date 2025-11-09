@@ -43,6 +43,10 @@ class RedisStore:
     def _activity_key(self, brand_id: str) -> str:
         """Generate Redis key for activity log."""
         return f"activity:{brand_id}"
+    
+    def _last_post_key(self, imessage_id: str) -> str:
+        """Generate Redis key for last generated post."""
+        return f"last_post:{imessage_id}"
 
     async def get_candidate_state(self, candidate_id: str) -> Optional[CandidateState]:
         """Retrieve candidate state from Redis."""
@@ -195,6 +199,28 @@ class RedisStore:
                 break
         
         return expired
+    
+    async def save_last_post(self, imessage_id: str, post_text: str, brand_id: str):
+        """Store the last generated post for a user."""
+        key = self._last_post_key(imessage_id)
+        data = json.dumps({
+            "post_text": post_text,
+            "brand_id": brand_id,
+            "timestamp": datetime.now(timezone.utc).isoformat()
+        })
+        # Store for 1 hour
+        await self.client.setex(key, 3600, data)
+    
+    async def get_last_post(self, imessage_id: str) -> Optional[dict]:
+        """Retrieve the last generated post for a user."""
+        key = self._last_post_key(imessage_id)
+        data = await self.client.get(key)
+        if data:
+            try:
+                return json.loads(data)
+            except Exception:
+                return None
+        return None
 
 
 # Global instance
