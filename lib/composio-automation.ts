@@ -10,10 +10,10 @@ import { AnthropicProvider } from "@composio/anthropic";
 import Anthropic from "@anthropic-ai/sdk";
 
 // Lazy initialization to avoid build-time errors
-let composioInstance: Composio | null = null;
+let composioInstance: Composio<AnthropicProvider> | null = null;
 let anthropicInstance: Anthropic | null = null;
 
-function getComposio() {
+function getComposio(): Composio<AnthropicProvider> {
   if (!composioInstance) {
     composioInstance = new Composio({
       apiKey: process.env.COMPOSIO_API_KEY,
