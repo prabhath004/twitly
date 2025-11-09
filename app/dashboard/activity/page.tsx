@@ -22,6 +22,8 @@ type Brand = {
 export default function ActivityFeedPage() {
   const [brands, setBrands] = useState<Brand[]>([]);
   const [brandId, setBrandId] = useState("");
+  const [userInput, setUserInput] = useState("");
+  const [tone, setTone] = useState("engaging");
   const [loading, setLoading] = useState(false);
   const [loadingBrands, setLoadingBrands] = useState(true);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
@@ -74,6 +76,11 @@ export default function ActivityFeedPage() {
       return;
     }
 
+    if (!userInput.trim()) {
+      setMessage({ type: "error", text: "Please provide a post idea or topic" });
+      return;
+    }
+
     setLoading(true);
     setMessage(null);
     setGeneratedPost(null);
@@ -82,6 +89,13 @@ export default function ActivityFeedPage() {
     try {
       const response = await fetch(`http://localhost:8500/post-now/${brandId.trim()}`, {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          user_input: userInput.trim(),
+          tone: tone,
+        }),
       });
 
       if (!response.ok) {
@@ -131,7 +145,7 @@ export default function ActivityFeedPage() {
           </div>
           
           <p className="text-sm text-neutral-600">
-            Select your brand to generate an AI-powered post and publish it to X
+            Provide your post idea and let AI craft the perfect tweet for your brand
           </p>
 
           {loadingBrands ? (
@@ -146,30 +160,71 @@ export default function ActivityFeedPage() {
               </p>
             </div>
           ) : (
-            <div className="flex gap-3">
-              <Select value={brandId} onValueChange={setBrandId} disabled={loading}>
-                <SelectTrigger className="flex-1">
-                  <SelectValue placeholder="Select a brand" />
-                </SelectTrigger>
-                <SelectContent>
-                  {brands.map((brand) => {
-                    // Use brand_name if it exists and is reasonable length, otherwise use name
-                    const displayName = brand.brand_name && brand.brand_name.length < 50 
-                      ? brand.brand_name 
-                      : brand.name;
-                    
-                    return (
-                      <SelectItem key={brand.id} value={brand.id}>
-                        {displayName}
-                      </SelectItem>
-                    );
-                  })}
-                </SelectContent>
-              </Select>
+            <div className="space-y-4">
+              {/* Brand Selection */}
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-2">
+                  Select Brand
+                </label>
+                <Select value={brandId} onValueChange={setBrandId} disabled={loading}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Choose your brand" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {brands.map((brand) => {
+                      const displayName = brand.brand_name && brand.brand_name.length < 50 
+                        ? brand.brand_name 
+                        : brand.name;
+                      
+                      return (
+                        <SelectItem key={brand.id} value={brand.id}>
+                          {displayName}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Post Idea Input */}
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-2">
+                  Post Idea / Topic <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={userInput}
+                  onChange={(e) => setUserInput(e.target.value)}
+                  disabled={loading}
+                  placeholder="E.g., 'Announce our new AI feature that helps users save 5 hours/week' or 'Share productivity tips for remote workers' or 'Promote our Black Friday sale'"
+                  className="w-full px-3 py-2 border border-neutral-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+                  rows={3}
+                />
+              </div>
+
+              {/* Tone Selection */}
+              <div>
+                <label className="block text-sm font-medium text-neutral-700 mb-2">
+                  Tone
+                </label>
+                <Select value={tone} onValueChange={setTone} disabled={loading}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="engaging">🎯 Engaging - Hook readers with curiosity</SelectItem>
+                    <SelectItem value="professional">💼 Professional - Clear and authoritative</SelectItem>
+                    <SelectItem value="casual">😊 Casual - Friendly and conversational</SelectItem>
+                    <SelectItem value="inspiring">✨ Inspiring - Motivational and uplifting</SelectItem>
+                    <SelectItem value="humorous">😄 Humorous - Light and witty</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Generate Button */}
               <Button
                 onClick={handleGenerateAndPost}
-                disabled={loading || !brandId.trim()}
-                className="bg-purple-600 hover:bg-purple-700 text-white"
+                disabled={loading || !brandId.trim() || !userInput.trim()}
+                className="w-full bg-purple-600 hover:bg-purple-700 text-white"
               >
                 {loading ? (
                   <>
@@ -220,7 +275,7 @@ export default function ActivityFeedPage() {
           )}
 
           <div className="text-xs text-neutral-500 space-y-1">
-            <p>💡 <strong>Tip:</strong> Select a brand from the dropdown to get started</p>
+            <p>💡 <strong>Tip:</strong> Be specific with your post idea - the more detail, the better the result!</p>
             <p>🔧 <strong>Make sure:</strong> daily-poster service is running on port 8500</p>
           </div>
         </div>
