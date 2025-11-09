@@ -17,8 +17,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Expose port (Render will set PORT env var)
-EXPOSE 10000
+EXPOSE $PORT
 
-# Start the application
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "10000"]
+# Start the application (use PORT env var from Render)
+CMD uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-10000}
 
