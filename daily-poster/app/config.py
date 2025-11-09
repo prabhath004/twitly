@@ -31,6 +31,9 @@ class Settings(BaseSettings):
     # Scheduling
     post_time_utc: str = "09:00"  # When to post daily (UTC)
     
+    # API Base URL (for calling Next.js API endpoints)
+    api_base_url: str = "http://localhost:3000"  # Default for local dev
+    
     class Config:
         env_file = ".env"
         case_sensitive = False

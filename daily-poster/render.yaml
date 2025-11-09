@@ -25,4 +25,6 @@ services:
         value: 100
       - key: TEMPERATURE
         value: 0.8
+      - key: API_BASE_URL
+        sync: false
 

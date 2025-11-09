@@ -196,9 +196,10 @@ async def generate_post(request: GeneratePostRequest, require_auto_post: bool = 
                 print(f"📤 Posting to X via TypeScript API endpoint...")
                 
                 # Call the working TypeScript API endpoint
+                api_url = f"{settings.api_base_url}/api/composio/post-tweet"
                 async with httpx.AsyncClient() as client:
                     api_response = await client.post(
-                        "http://localhost:3000/api/composio/post-tweet",
+                        api_url,
                         json={
                             "userId": request.brand_id,
                             "text": post_text
@@ -479,9 +480,10 @@ async def post_action(request: PostActionRequest):
         try:
             print(f"📤 Posting to X via TypeScript API endpoint...")
             
+            api_url = f"{settings.api_base_url}/api/composio/post-tweet"
             async with httpx.AsyncClient() as client:
                 api_response = await client.post(
-                    "http://localhost:3000/api/composio/post-tweet",
+                    api_url,
                     json={
                         "userId": request.brand_id,
                         "text": post_text
