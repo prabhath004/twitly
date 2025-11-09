@@ -8,7 +8,11 @@ high-quality, on-brand daily posts.
 """
 
 
-def build_post_generation_prompt(brand_data: dict) -> tuple[str, str]:
+def build_post_generation_prompt(
+    brand_data: dict,
+    user_input: str = None,
+    tone: str = "engaging"
+) -> tuple[str, str, str]:
     """
     Build system and user prompts for daily post generation.
     
@@ -22,15 +26,18 @@ def build_post_generation_prompt(brand_data: dict) -> tuple[str, str]:
     
     Args:
         brand_data: Complete brand_agent row from Supabase
+        user_input: User's specific post idea/topic (optional)
+        tone: Desired tone for the post (engaging, professional, casual, inspiring, humorous)
         
     Returns:
-        (system_prompt, user_prompt) tuple
+        (system_prompt, user_prompt, url_suffix) tuple
     """
     
     # Extract brand info
     brand_name = brand_data.get("brand_name") or brand_data.get("name", "Our Brand")
     description = brand_data.get("description", "")
     personality = brand_data.get("personality", "professional")
+    website = brand_data.get("website", "")
     
     # Build comprehensive system prompt
     system_prompt = f"""You are the social media voice for {brand_name}.
@@ -113,35 +120,133 @@ Brand: {brand_name}
                 system_prompt += f"- {key}: {value}\n"
         system_prompt += "\n"
     
+    # Add tone-specific instructions
+    tone_instructions = {
+        "engaging": """
+=== TONE: ENGAGING ===
+- Hook readers immediately with curiosity or intrigue
+- Use pattern interrupts (surprising facts, bold statements)
+- Ask thought-provoking questions that make people stop scrolling
+- Create a sense of urgency or FOMO when appropriate
+- Use power words that grab attention
+- Make it conversational and relatable""",
+        
+        "professional": """
+=== TONE: PROFESSIONAL ===
+- Use clear, authoritative language
+- Focus on facts, data, and expertise
+- Be concise and to-the-point
+- Maintain credibility and trust
+- Avoid casual slang or excessive emojis
+- Position as an industry leader""",
+        
+        "casual": """
+=== TONE: CASUAL ===
+- Write like you're talking to a friend
+- Use contractions and relaxed language
+- Be warm, approachable, and friendly
+- Share authentic moments and insights
+- Use emojis naturally (2-3 is fine)
+- Keep it light and conversational""",
+        
+        "inspiring": """
+=== TONE: INSPIRING ===
+- Uplift and motivate your audience
+- Share powerful insights and lessons
+- Use aspirational language
+- Connect to bigger purpose and meaning
+- Encourage action and growth
+- Be authentic and heartfelt""",
+        
+        "humorous": """
+=== TONE: HUMOROUS ===
+- Be witty and clever (not forced)
+- Use wordplay or unexpected twists when appropriate
+- Keep it light and fun
+- Relate humor to the topic at hand
+- Avoid controversial or offensive jokes
+- Make it shareable and memorable"""
+    }
+    
+    system_prompt += tone_instructions.get(tone, tone_instructions["engaging"])
+    
+    # Calculate space needed for URL if we have one
+    url_suffix = ""
+    char_limit = 280
+    if website:
+        # Reserve space for URL suffix: "\n\nTry it: [URL]"
+        # Format: "\n\nTry it: website.com" (shortest form)
+        url_suffix = f"\n\nTry it: {website}"
+        chars_needed = len(url_suffix)
+        char_limit = 280 - chars_needed
+        system_prompt += f"\n\n=== CALL-TO-ACTION ===\nYour tweet will automatically include our website link at the end.\nReserved space: {chars_needed} characters for URL\n"
+    
     # Add posting guidelines
-    system_prompt += """=== POST GUIDELINES ===
-- Keep posts under 280 characters (Twitter limit)
+    system_prompt += f"""
+
+=== POST GUIDELINES ===
+- Keep posts under {char_limit} characters (to leave room for URL)
 - Be authentic and provide value
 - Match our brand voice and personality
 - Focus on our content pillars
 - Highlight what makes us unique (when relevant)
 - Engage our target audience
 - Be helpful, not salesy
-- Use emojis sparingly (1-2 max)
-- End with a subtle call-to-action when appropriate
+- Make every word count
+- Create posts that stand out and get engagement
 
-IMPORTANT: Generate ONLY the tweet text, nothing else.
+IMPORTANT: Generate ONLY the tweet text, nothing else. No quotes, no labels, just the tweet.
 """
     
-    # Build user prompt
-    user_prompt = """Generate a high-quality daily tweet for our brand.
+    # Build dynamic user prompt based on user input
+    if user_input:
+        # User provided specific input - build prompt around it
+        user_prompt = f"""Create a compelling tweet about the following:
 
-Consider:
-- What value can we provide today?
-- What insights can we share?
-- What question can we ask our audience?
-- What behind-the-scenes content could engage?
+{user_input}
 
-Focus on one of our content pillars and create something our target audience will find valuable.
+Requirements:
+- Incorporate this idea/topic into the tweet
+- Stay true to our brand voice and values
+- Make it {tone} in tone
+- Keep it under {char_limit} characters
+- Make it valuable and engaging for our target audience
+- Don't just repeat the input - transform it into an engaging tweet
 
-Tweet text (under 280 characters):"""
+Tweet text:"""
+    else:
+        # No user input - generate varied content
+        import random
+        
+        approaches = [
+            "Share a valuable insight related to our content pillars that our audience will find helpful",
+            "Ask a thought-provoking question that sparks discussion among our target audience",
+            "Share a behind-the-scenes moment that humanizes our brand",
+            "Provide a quick tip or hack related to what we do",
+            "Share a surprising fact or statistic relevant to our industry",
+            "Tell a micro-story that illustrates our brand values",
+            "Challenge a common misconception in our space",
+            "Share what we're working on or excited about",
+            "Provide perspective on a trend in our industry",
+            "Share a lesson we've learned that others can benefit from"
+        ]
+        
+        selected_approach = random.choice(approaches)
+        
+        user_prompt = f"""Generate a high-quality tweet for our brand.
+
+Approach: {selected_approach}
+
+Requirements:
+- Make it {tone} in tone
+- Focus on our content pillars and target audience
+- Under {char_limit} characters
+- Provide real value
+- Make it unique and memorable
+
+Tweet text:"""
     
-    return system_prompt, user_prompt
+    return system_prompt, user_prompt, url_suffix
 
 
 def build_themed_post_prompt(brand_data: dict, theme: str) -> tuple[str, str]:

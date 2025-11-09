@@ -84,6 +84,8 @@ class GeneratePostRequest(BaseModel):
     brand_id: str = Field(..., description="Brand UUID")
     theme: Optional[str] = Field(None, description="Post theme (optional)")
     auto_post: bool = Field(False, description="Automatically post to X")
+    user_input: Optional[str] = Field(None, description="User's post idea/topic")
+    tone: Optional[str] = Field("engaging", description="Tone of the post")
 
 
 class PostResponse(BaseModel):
@@ -109,7 +111,7 @@ async def root():
 
 
 @app.post("/generate", response_model=PostResponse)
-async def generate_post(request: GeneratePostRequest):
+async def generate_post(request: GeneratePostRequest, require_auto_post: bool = True):
     """
     Generate a post for a brand (and optionally post it).
     
@@ -121,12 +123,15 @@ async def generate_post(request: GeneratePostRequest):
     4. Optionally posts via Composio
     """
     # 1. Fetch brand data
-    brand_data = await get_brand_for_posting(request.brand_id)
+    brand_data = await get_brand_for_posting(request.brand_id, require_auto_post=require_auto_post)
     
     if not brand_data:
+        error_msg = f"Brand not found or inactive: {request.brand_id}"
+        if require_auto_post:
+            error_msg = f"Brand not found, inactive, or auto_post disabled: {request.brand_id}"
         raise HTTPException(
             status_code=404,
-            detail=f"Brand not found, inactive, or auto_post disabled: {request.brand_id}"
+            detail=error_msg
         )
     
     brand_name = brand_data.get("brand_name") or brand_data.get("name")
@@ -134,23 +139,38 @@ async def generate_post(request: GeneratePostRequest):
     
     try:
         # 2. Build prompt with ALL brand context
+        url_suffix = ""
         if request.theme:
             system_prompt, user_prompt = build_themed_post_prompt(brand_data, request.theme)
             print(f"   Theme: {request.theme}")
         else:
-            system_prompt, user_prompt = build_post_generation_prompt(brand_data)
+            system_prompt, user_prompt, url_suffix = build_post_generation_prompt(
+                brand_data, 
+                user_input=request.user_input,
+                tone=request.tone
+            )
+            if request.user_input:
+                print(f"   User Input: {request.user_input}")
+            print(f"   Tone: {request.tone}")
+            if url_suffix:
+                print(f"   Will append URL: {url_suffix.strip()}")
         
         # 3. Generate post with xAI
         print(f"   Calling xAI (Grok)...")
         post_text = await xai_client.generate_post(system_prompt, user_prompt)
         
-        # Ensure under 280 chars
+        # 4. Append URL suffix if we have one
+        if url_suffix:
+            post_text = post_text + url_suffix
+        
+        # Ensure under 280 chars (should already be due to our calculations, but double-check)
         if len(post_text) > 280:
+            print(f"   Warning: Post is {len(post_text)} chars, truncating...")
             post_text = post_text[:277] + "..."
         
         print(f"✅ Generated ({len(post_text)} chars): {post_text}")
         
-        # 4. Post via Composio (if auto_post enabled)
+        # 5. Post via Composio (if auto_post enabled)
         tweet_id = None
         tweet_url = None
         error_msg = None
@@ -254,20 +274,35 @@ async def generate_post(request: GeneratePostRequest):
         )
 
 
+class PostNowRequest(BaseModel):
+    """Request body for post-now endpoint."""
+    user_input: Optional[str] = Field(None, description="User's post idea/topic")
+    tone: Optional[str] = Field("engaging", description="Tone of the post")
+    theme: Optional[str] = Field(None, description="Post theme (optional)")
+
+
 @app.post("/post-now/{brand_id}")
-async def post_now(brand_id: str, theme: Optional[str] = None):
+async def post_now(brand_id: str, body: Optional[PostNowRequest] = None):
     """
     Generate and post immediately for a brand.
     
     Shortcut endpoint - just pass brand_id!
+    This is for MANUAL posting (from activity feed), so we don't require auto_post to be enabled.
     """
+    user_input = body.user_input if body else None
+    tone = body.tone if body else "engaging"
+    theme = body.theme if body else None
+    
     request = GeneratePostRequest(
         brand_id=brand_id,
         theme=theme,
-        auto_post=True
+        auto_post=True,
+        user_input=user_input,
+        tone=tone
     )
     
-    return await generate_post(request)
+    # Manual post - don't require auto_post flag
+    return await generate_post(request, require_auto_post=False)
 
 
 async def post_for_all_brands():

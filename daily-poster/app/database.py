@@ -15,7 +15,7 @@ def get_supabase() -> Client:
     )
 
 
-async def get_brand_for_posting(brand_id: str) -> Optional[dict]:
+async def get_brand_for_posting(brand_id: str, require_auto_post: bool = True) -> Optional[dict]:
     """
     Fetch brand data for post generation.
     
@@ -24,6 +24,8 @@ async def get_brand_for_posting(brand_id: str) -> Optional[dict]:
     
     Args:
         brand_id: Brand UUID
+        require_auto_post: If True, only return brands with auto_post enabled (for scheduled posts)
+                          If False, return any active brand (for manual posts)
         
     Returns:
         Brand data dict or None
@@ -31,13 +33,16 @@ async def get_brand_for_posting(brand_id: str) -> Optional[dict]:
     try:
         supabase = get_supabase()
         
-        result = supabase.table("brand_agent") \
+        query = supabase.table("brand_agent") \
             .select("*") \
             .eq("id", brand_id) \
-            .eq("is_active", True) \
-            .eq("auto_post", True) \
-            .limit(1) \
-            .execute()
+            .eq("is_active", True)
+        
+        # Only check auto_post for scheduled/automatic posting
+        if require_auto_post:
+            query = query.eq("auto_post", True)
+        
+        result = query.limit(1).execute()
         
         if not result.data:
             return None
