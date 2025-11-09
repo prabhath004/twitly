@@ -54,12 +54,26 @@ export async function initiateConnection(
   console.log(`\n🔗 [CONNECT] Initiating ${integration} connection for user: ${userId}`);
   console.log(`   Auth Config ID: ${authConfigId}`);
   
+  // Build callback URL if not provided
+  const finalCallbackUrl = callbackUrl || (() => {
+    // Try to get URL from environment or use a default
+    const baseUrl = 
+      process.env.NEXT_PUBLIC_APP_URL || 
+      (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null);
+    
+    if (!baseUrl) {
+      throw new Error('NEXT_PUBLIC_APP_URL or VERCEL_URL must be set for OAuth callbacks');
+    }
+    
+    return `${baseUrl}/dashboard/integrations?connection=success`;
+  })();
+
   // Initiate the connection using the auth config
   const connectionRequest = await composioClient.connectedAccounts.initiate(
     userId,
     authConfigId,
     {
-      callbackUrl: callbackUrl || `${process.env.NEXT_PUBLIC_APP_URL}/dashboard/integrations?connection=success`,
+      callbackUrl: finalCallbackUrl,
     }
   );
 
