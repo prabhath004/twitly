@@ -110,3 +110,86 @@ async def log_post(brand_id: str, post_text: str, tweet_id: str = None, success:
         print(f"⚠️  Could not log to database (this is OK, tweet still posted): {e}")
         print(f"   To fix: Create daily_content table in Supabase")
 
+
+async def get_next_pending_action(brand_id: str) -> Optional[dict]:
+    """
+    Get the next pending action for a brand.
+    
+    Args:
+        brand_id: Brand UUID
+        
+    Returns:
+        Next pending action or None
+    """
+    try:
+        supabase = get_supabase()
+        
+        result = supabase.table("content_actions") \
+            .select("*") \
+            .eq("brand_id", brand_id) \
+            .eq("status", "pending") \
+            .order("created_at", desc=False) \
+            .limit(1) \
+            .execute()
+        
+        if not result.data:
+            return None
+        
+        return result.data[0]
+        
+    except Exception as e:
+        print(f"Failed to fetch next action: {e}")
+        return None
+
+
+async def get_all_pending_actions() -> List[dict]:
+    """
+    Get all pending actions across all brands.
+    
+    Returns:
+        List of pending actions
+    """
+    try:
+        supabase = get_supabase()
+        
+        result = supabase.table("content_actions") \
+            .select("*") \
+            .eq("status", "pending") \
+            .order("created_at", desc=False) \
+            .execute()
+        
+        return result.data or []
+        
+    except Exception as e:
+        print(f"Failed to fetch pending actions: {e}")
+        return []
+
+
+async def mark_action_completed(action_id: str, tweet_id: str = None, tweet_url: str = None, post_text: str = None):
+    """
+    Mark an action as completed.
+    
+    Args:
+        action_id: Action UUID
+        tweet_id: Posted tweet ID
+        tweet_url: Posted tweet URL
+        post_text: Generated post text
+    """
+    try:
+        supabase = get_supabase()
+        
+        from datetime import datetime
+        
+        supabase.table("content_actions").update({
+            "status": "completed",
+            "posted_at": datetime.utcnow().isoformat(),
+            "tweet_id": tweet_id,
+            "tweet_url": tweet_url,
+            "post_text": post_text
+        }).eq("id", action_id).execute()
+        
+        print(f"✅ Marked action {action_id} as completed")
+        
+    except Exception as e:
+        print(f"Failed to mark action as completed: {e}")
+

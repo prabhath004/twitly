@@ -23,9 +23,9 @@ from apscheduler.schedulers.asyncio import AsyncIOScheduler
 import httpx
 
 from app.config import settings
-from app.database import get_brand_for_posting, get_all_brands_for_posting, log_post
+from app.database import get_brand_for_posting, get_all_brands_for_posting, log_post, get_next_pending_action, get_all_pending_actions, mark_action_completed
 from app.xai_client import xai_client
-from app.prompts import build_post_generation_prompt, build_themed_post_prompt
+from app.prompts import build_post_generation_prompt, build_themed_post_prompt, build_action_post_prompt
 
 
 # Scheduler for daily posts
@@ -50,9 +50,20 @@ async def lifespan(app: FastAPI):
         id="daily_post",
         replace_existing=True
     )
+    
+    # Schedule hourly action posting
+    scheduler.add_job(
+        post_pending_actions,
+        trigger="interval",
+        hours=1,
+        id="hourly_actions",
+        replace_existing=True
+    )
+    
     scheduler.start()
     
     print(f"✅ Scheduled daily posts at {settings.post_time_utc} UTC")
+    print(f"✅ Scheduled hourly action posting")
     print(f"   Server ready on port {settings.port}")
     
     yield
@@ -378,17 +389,202 @@ async def trigger_daily_job(background_tasks: BackgroundTasks):
 async def next_post_time():
     """Get info about next scheduled post."""
     job = scheduler.get_job("daily_post")
+    actions_job = scheduler.get_job("hourly_actions")
     
     if job and job.next_run_time:
         return {
-            "next_run": job.next_run_time.isoformat(),
+            "next_daily_post": job.next_run_time.isoformat(),
+            "next_action_post": actions_job.next_run_time.isoformat() if actions_job else None,
             "configured_time": settings.post_time_utc
         }
     else:
         return {
-            "next_run": None,
+            "next_daily_post": None,
+            "next_action_post": actions_job.next_run_time.isoformat() if actions_job else None,
             "configured_time": settings.post_time_utc
         }
+
+
+class PostActionRequest(BaseModel):
+    """Request to post an action."""
+    action_id: str = Field(..., description="Action UUID")
+    brand_id: str = Field(..., description="Brand UUID")
+    action_type: str = Field(..., description="Action type")
+    title: str = Field(..., description="Action title/goal")
+    description: Optional[str] = Field(None, description="Action description")
+    context: Optional[str] = Field(None, description="Additional context")
+    tone: Optional[str] = Field("engaging", description="Tone")
+
+
+@app.post("/post-action")
+async def post_action(request: PostActionRequest):
+    """
+    Generate and post content for a specific action.
+    
+    This is called by the frontend's manual trigger or by the hourly scheduler.
+    """
+    print(f"\n🎯 [POST ACTION] Processing action: {request.action_id}")
+    print(f"   Type: {request.action_type}")
+    print(f"   Goal: {request.title}")
+    
+    try:
+        # 1. Fetch brand data
+        brand_data = await get_brand_for_posting(request.brand_id, require_auto_post=False)
+        
+        if not brand_data:
+            raise HTTPException(
+                status_code=404,
+                detail=f"Brand not found or inactive: {request.brand_id}"
+            )
+        
+        brand_name = brand_data.get("brand_name") or brand_data.get("name")
+        print(f"🎨 Generating action post for: {brand_name}")
+        
+        # 2. Build action-specific prompt
+        action_data = {
+            "action_type": request.action_type,
+            "title": request.title,
+            "description": request.description,
+            "context": request.context,
+            "tone": request.tone
+        }
+        
+        system_prompt, user_prompt, url_suffix = build_action_post_prompt(brand_data, action_data)
+        
+        # 3. Generate post with xAI
+        print(f"   Calling xAI (Grok)...")
+        post_text = await xai_client.generate_post(system_prompt, user_prompt)
+        
+        # 4. Append URL suffix if we have one
+        if url_suffix:
+            post_text = post_text + url_suffix
+        
+        # Ensure under 280 chars
+        if len(post_text) > 280:
+            print(f"   Warning: Post is {len(post_text)} chars, truncating...")
+            post_text = post_text[:277] + "..."
+        
+        print(f"✅ Generated ({len(post_text)} chars): {post_text}")
+        
+        # 5. Post to X automatically
+        tweet_id = None
+        tweet_url = None
+        error_msg = None
+        
+        try:
+            print(f"📤 Posting to X via TypeScript API endpoint...")
+            
+            async with httpx.AsyncClient() as client:
+                api_response = await client.post(
+                    "http://localhost:3000/api/composio/post-tweet",
+                    json={
+                        "userId": request.brand_id,
+                        "text": post_text
+                    },
+                    timeout=30.0
+                )
+                
+                if api_response.status_code != 200:
+                    raise Exception(f"API returned {api_response.status_code}: {api_response.text}")
+                
+                response = api_response.json()
+                
+                if not response.get("success"):
+                    error_msg = response.get("error") or response.get("message") or "Unknown error from API"
+                    raise Exception(f"API call failed: {error_msg}")
+                
+                # Extract tweet details
+                tweet_id = response.get("tweetId")
+                tweet_url = response.get("url")
+                
+                if not tweet_id and "fullResult" in response:
+                    full_result = response.get("fullResult", {})
+                    data = full_result.get("data", {})
+                    tweet_id = data.get("id") or data.get("tweet_id") or data.get("id_str")
+                
+                if not tweet_url and tweet_id:
+                    tweet_url = f"https://x.com/i/status/{tweet_id}"
+                
+                if response.get("success"):
+                    print(f"✅ Tweet posted successfully!")
+                    if tweet_id:
+                        print(f"   Tweet ID: {tweet_id}")
+                    if tweet_url:
+                        print(f"   URL: {tweet_url}")
+                    
+                    # Mark action as completed
+                    await mark_action_completed(request.action_id, tweet_id, tweet_url, post_text)
+                    
+        except Exception as e:
+            error_msg = str(e)
+            print(f"❌ Failed to post: {error_msg}")
+        
+        return {
+            "success": tweet_id is not None,
+            "action_id": request.action_id,
+            "post_text": post_text,
+            "character_count": len(post_text),
+            "tweet_id": tweet_id,
+            "tweet_url": tweet_url,
+            "error": error_msg
+        }
+        
+    except Exception as e:
+        print(f"❌ [POST ACTION] Error: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to post action: {str(e)}"
+        )
+
+
+async def post_pending_actions():
+    """
+    Post pending actions for all brands (called hourly by scheduler).
+    
+    For now, we just post the oldest pending action.
+    In the future, we can implement priority logic here.
+    """
+    print(f"\n⏰ Hourly action job triggered: {datetime.now().isoformat()}")
+    
+    # Get all pending actions
+    actions = await get_all_pending_actions()
+    print(f"   Found {len(actions)} pending action(s)")
+    
+    if not actions:
+        print("   No pending actions to post")
+        return
+    
+    # For now, just post the first one (oldest)
+    action = actions[0]
+    action_id = action["id"]
+    brand_id = action["brand_id"]
+    
+    print(f"\n📝 Posting action: {action['title']}")
+    print(f"   Type: {action['action_type']}")
+    print(f"   Brand: {brand_id}")
+    
+    try:
+        request = PostActionRequest(
+            action_id=action_id,
+            brand_id=brand_id,
+            action_type=action["action_type"],
+            title=action["title"],
+            description=action.get("description"),
+            context=action.get("context"),
+            tone=action.get("tone", "engaging")
+        )
+        
+        result = await post_action(request)
+        
+        if result["success"]:
+            print(f"✅ Action posted successfully!")
+        else:
+            print(f"❌ Action post failed: {result.get('error')}")
+            
+    except Exception as e:
+        print(f"❌ Failed to post action: {e}")
+    
+    print(f"\n⏰ Hourly action job complete")
 
 
 if __name__ == "__main__":

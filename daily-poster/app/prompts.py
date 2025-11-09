@@ -290,3 +290,66 @@ def build_themed_post_prompt(brand_data: dict, theme: str) -> tuple[str, str]:
     
     return system_prompt, user_prompt
 
+
+def build_action_post_prompt(brand_data: dict, action_data: dict) -> tuple[str, str, str]:
+    """
+    Build prompts for an action-based post.
+    
+    Args:
+        brand_data: Brand info from database
+        action_data: Action details (type, title, description, context, tone)
+        
+    Returns:
+        (system_prompt, user_prompt, url_suffix) tuple
+    """
+    action_type = action_data.get("action_type", "announcement")
+    title = action_data.get("title", "")
+    description = action_data.get("description", "")
+    context = action_data.get("context", "")
+    tone = action_data.get("tone", "engaging")
+    
+    # Action type specific prompt styles
+    action_prompts = {
+        "announcement": "Create an exciting announcement tweet that grabs attention and clearly communicates the news. Make it newsworthy and shareable.",
+        
+        "engagement": "Create a tweet that encourages replies and interaction. Ask a thought-provoking question or start a discussion that your audience will want to engage with.",
+        
+        "excitement": "Build hype and excitement! Create anticipation with a teaser or behind-the-scenes content that makes people curious and eager to learn more.",
+        
+        "promotion": "Promote this offering in a compelling way that drives action. Highlight the value and benefits without being too salesy. Create urgency if appropriate.",
+        
+        "education": "Share valuable knowledge in a clear, helpful way. Teach something useful that your audience can apply. Be the expert they trust.",
+        
+        "community": "Celebrate community wins, share customer stories, or highlight your audience. Build connection and make people feel part of something bigger.",
+        
+        "metrics": "Share this achievement or milestone in a way that's impressive yet authentic. Make it relatable and show the journey, not just the destination."
+    }
+    
+    prompt_style = action_prompts.get(action_type, action_prompts["announcement"])
+    
+    # Build comprehensive system prompt with action context
+    system_prompt, _, url_suffix = build_post_generation_prompt(brand_data, tone=tone)
+    
+    # Build user prompt with action details
+    user_prompt = f"""Generate a tweet for this content action:
+
+ACTION TYPE: {action_type.upper()}
+GOAL: {title}
+
+{f"DESCRIPTION: {description}" if description else ""}
+
+{f"ADDITIONAL CONTEXT: {context}" if context else ""}
+
+STYLE: {prompt_style}
+
+Requirements:
+- Make it {tone} in tone
+- Stay true to our brand voice and values
+- Create content that achieves the action's goal
+- Be authentic and provide value
+- Make it memorable and shareable
+
+Tweet text:"""
+    
+    return system_prompt, user_prompt, url_suffix
+
