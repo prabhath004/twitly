@@ -37,9 +37,9 @@ export default function HeroSection() {
     <>
       <section className="bg-gradient-to-b from-neutral-50 to-white w-full text-sm pb-44">
         <nav className="flex items-center justify-between p-4 md:px-16 lg:px-24 xl:px-32 md:py-6 w-full">
-          <Link href="/" aria-label="BrandPilot home" className="flex items-center gap-2">
+          <Link href="/" aria-label="Replic home" className="flex items-center gap-2">
             <Twitter className="h-8 w-8 text-[#1D9BF0]" />
-            <span className="font-mono text-xl font-bold">BrandPilot</span>
+            <span className="font-mono text-xl font-bold">Replic</span>
           </Link>
 
           <div
@@ -98,7 +98,11 @@ export default function HeroSection() {
           </button>
         </div>
 
-        <p className="text-4xl md:text-6xl font-bold mx-auto max-w-3xl text-center mt-16 md:mt-20 max-md:px-4 font-mono text-neutral-900 leading-tight">
+        <h1 className="text-4xl md:text-7xl font-bold max-w-[950px] text-center mx-auto mt-8 font-mono leading-tight">
+          Turn Your X and Reddit Accounts Into an AI-Powered Brand Manager
+        </h1>
+
+        <p className="text-sm md:text-base mx-auto max-w-2xl text-center mt-6 max-md:px-2 font-mono text-muted-foreground">
           Automate your social presence. Stay active, authentic, and on-brand — 24/7.
         </p>
 

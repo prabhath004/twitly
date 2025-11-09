@@ -199,7 +199,7 @@ export default function OnboardingPage() {
         <div className="flex justify-center mb-8">
           <Link href="/" className="flex items-center gap-2">
             <Twitter className="h-8 w-8 text-[#1D9BF0]" />
-            <span className="font-mono text-xl font-bold">BrandPilot</span>
+            <span className="font-mono text-xl font-bold">Replic</span>
           </Link>
         </div>
 
@@ -335,7 +335,7 @@ export default function OnboardingPage() {
               <div className="space-y-6">
                 <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
                   <p className="text-sm font-mono text-blue-900">
-                    <strong>Complete your brand profile</strong> to enable AI to generate authentic, on-brand content tailored to your business
+                    <strong>Complete your brand profile</strong> to enable Claude to generate authentic, on-brand content tailored to your business
                   </p>
                 </div>
 
@@ -497,11 +497,11 @@ export default function OnboardingPage() {
                   </div>
                 </div>
 
-                {/* SECTION 6: Brand Questions */}
+                {/* SECTION 6: Answer Website Analysis Questions */}
                 {suggestedQuestions.length > 0 && (
                   <div className="border-t pt-6">
-                    <h3 className="font-mono font-semibold text-base mb-4 text-neutral-900">Brand Questions</h3>
-                    <p className="text-xs font-mono text-neutral-500 mb-4">Answer these questions to help us understand your brand better</p>
+                    <h3 className="font-mono font-semibold text-base mb-4 text-neutral-900">Website Analysis Questions</h3>
+                    <p className="text-xs font-mono text-neutral-500 mb-4">Based on our analysis of your website, answer these questions to help us understand your brand better</p>
                     <div className="space-y-6">
                       {suggestedQuestions.map((question, index) => {
                         // Define dropdown options for each question
@@ -659,7 +659,7 @@ export default function OnboardingPage() {
               onClick={handleFinish}
               className="bg-[#22C55E] hover:bg-[#16a34a] font-mono"
             >
-              Activate BrandPilot
+              Activate Replic
               <Check className="h-4 w-4 ml-1" />
             </Button>
           )}

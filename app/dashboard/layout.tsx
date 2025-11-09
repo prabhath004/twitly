@@ -2,10 +2,11 @@
 
 import React, { useState } from "react";
 import { Sidebar, SidebarBody, SidebarLink } from "@/components/ui/sidebar";
-import { Home, Send, Settings, Plug, LogOut, Twitter, Activity, Target, MessageSquare } from "lucide-react";
+import { Home, Send, Settings, Plug, LogOut, Twitter, Activity } from "lucide-react";
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { ProjectSelector } from "@/components/ui/project-selector";
 
 export default function DashboardLayout({
   children,
@@ -32,20 +33,6 @@ export default function DashboardLayout({
       href: "/dashboard/activity",
       icon: (
         <Activity className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
-      ),
-    },
-    {
-      label: "Actions",
-      href: "/dashboard/actions",
-      icon: (
-        <Target className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
-      ),
-    },
-    {
-      label: "Auto-Replies",
-      href: "/dashboard/auto-replies",
-      icon: (
-        <MessageSquare className="text-neutral-700 dark:text-neutral-200 h-5 w-5 flex-shrink-0" />
       ),
     },
     {
@@ -92,6 +79,12 @@ export default function DashboardLayout({
         </SidebarBody>
       </Sidebar>
       <div className="flex flex-1 flex-col">
+        <div className="p-4 md:p-6 border-b border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <h2 className="font-mono text-sm text-neutral-600">Project:</h2>
+            <ProjectSelector />
+          </div>
+        </div>
         <div className="p-2 md:p-10 rounded-tl-2xl border border-neutral-200 dark:border-neutral-700 bg-white dark:bg-neutral-900 flex flex-col gap-2 flex-1 w-full h-full overflow-y-auto">
           {children}
         </div>
@@ -112,7 +105,7 @@ export const Logo = () => {
         animate={{ opacity: 1 }}
         className="font-mono font-bold text-lg text-black dark:text-white whitespace-pre"
       >
-        BrandPilot
+        Replic
       </motion.span>
     </Link>
   );

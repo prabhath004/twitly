@@ -427,8 +427,7 @@ export default function IntegrationsPage() {
                 <Button
                   onClick={() => handleConnect(integration)}
                   disabled={isLoading || !integration.isComposio}
-                  style={!integration.isComposio ? { opacity: 1 } : {}}
-                  className="w-full !bg-blue-600 hover:!bg-blue-700 active:!bg-blue-800 text-white font-mono text-xs disabled:!bg-blue-600 disabled:!opacity-100 disabled:cursor-not-allowed"
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white font-mono text-xs disabled:opacity-50"
                 >
                   {isLoading ? "Connecting..." : "Connect"}
                 </Button>

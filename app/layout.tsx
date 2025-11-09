@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "BrandPilot - AI Agent for X That Auto-Replies in Your Brand Voice",
+  title: "Replic - AI Agent for X That Auto-Replies in Your Brand Voice",
   description: "Automate your social presence. Stay active, authentic, and on-brand — 24/7.",
 };
 
