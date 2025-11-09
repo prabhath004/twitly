@@ -41,7 +41,7 @@ export async function PUT(request: NextRequest) {
     // Update the action
     const { data, error } = await supabase
       .from("content_actions")
-      .update(updates)
+      .update(updates as any)
       .eq("id", id)
       .select()
       .single();
