@@ -1,21 +1,76 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card } from "@/components/ui/card";
-import { Activity, Sparkles, Check, X } from "lucide-react";
+import { Activity, Sparkles, Check, X, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { createSupabaseClient } from "@/lib/supabase";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+type Brand = {
+  id: string;
+  brand_name: string;
+  name: string;
+};
 
 export default function ActivityFeedPage() {
+  const [brands, setBrands] = useState<Brand[]>([]);
   const [brandId, setBrandId] = useState("");
   const [loading, setLoading] = useState(false);
+  const [loadingBrands, setLoadingBrands] = useState(true);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [generatedPost, setGeneratedPost] = useState<string | null>(null);
   const [tweetUrl, setTweetUrl] = useState<string | null>(null);
 
+  // Fetch brands on component mount
+  useEffect(() => {
+    const fetchBrands = async () => {
+      try {
+        const supabase = createSupabaseClient();
+        const { data: userData } = await supabase.auth.getUser();
+        
+        if (!userData.user) {
+          setMessage({ type: "error", text: "Please log in to view your brands" });
+          return;
+        }
+
+        const { data, error } = await supabase
+          .from("brand_agent")
+          .select("id, brand_name, name")
+          .eq("user_id", userData.user.id)
+          .eq("is_active", true)
+          .order("created_at", { ascending: false });
+
+        if (error) {
+          console.error("Error fetching brands:", error);
+          setMessage({ type: "error", text: "Failed to load brands" });
+        } else {
+          const brandsData = (data || []) as Brand[];
+          setBrands(brandsData);
+          // Auto-select first brand if available
+          if (brandsData.length > 0) {
+            setBrandId(brandsData[0].id);
+          }
+        }
+      } catch (error) {
+        console.error("Error:", error);
+      } finally {
+        setLoadingBrands(false);
+      }
+    };
+
+    fetchBrands();
+  }, []);
+
   const handleGenerateAndPost = async () => {
     if (!brandId.trim()) {
-      setMessage({ type: "error", text: "Please enter your Brand ID" });
+      setMessage({ type: "error", text: "Please select a brand" });
       return;
     }
 
@@ -76,36 +131,60 @@ export default function ActivityFeedPage() {
           </div>
           
           <p className="text-sm text-neutral-600">
-            Enter your Brand ID to generate an AI-powered post and publish it to X
+            Select your brand to generate an AI-powered post and publish it to X
           </p>
 
-          <div className="flex gap-3">
-            <Input
-              type="text"
-              placeholder="Enter Brand ID (UUID from Supabase)"
-              value={brandId}
-              onChange={(e) => setBrandId(e.target.value)}
-              className="flex-1"
-              disabled={loading}
-            />
-            <Button
-              onClick={handleGenerateAndPost}
-              disabled={loading || !brandId.trim()}
-              className="bg-purple-600 hover:bg-purple-700 text-white"
-            >
-              {loading ? (
-                <>
-                  <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2" />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <Sparkles className="h-4 w-4 mr-2" />
-                  Generate & Post
-                </>
-              )}
-            </Button>
-          </div>
+          {loadingBrands ? (
+            <div className="flex items-center justify-center py-4">
+              <Loader2 className="h-6 w-6 animate-spin text-purple-600" />
+              <span className="ml-2 text-sm text-neutral-600">Loading your brands...</span>
+            </div>
+          ) : brands.length === 0 ? (
+            <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+              <p className="text-sm text-yellow-800">
+                No active brands found. Please create a brand first in your dashboard.
+              </p>
+            </div>
+          ) : (
+            <div className="flex gap-3">
+              <Select value={brandId} onValueChange={setBrandId} disabled={loading}>
+                <SelectTrigger className="flex-1">
+                  <SelectValue placeholder="Select a brand" />
+                </SelectTrigger>
+                <SelectContent>
+                  {brands.map((brand) => {
+                    // Use brand_name if it exists and is reasonable length, otherwise use name
+                    const displayName = brand.brand_name && brand.brand_name.length < 50 
+                      ? brand.brand_name 
+                      : brand.name;
+                    
+                    return (
+                      <SelectItem key={brand.id} value={brand.id}>
+                        {displayName}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+              <Button
+                onClick={handleGenerateAndPost}
+                disabled={loading || !brandId.trim()}
+                className="bg-purple-600 hover:bg-purple-700 text-white"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="h-4 w-4 mr-2" />
+                    Generate & Post
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
 
           {/* Success/Error Message */}
           {message && (
@@ -117,9 +196,9 @@ export default function ActivityFeedPage() {
               }`}
             >
               {message.type === "success" ? (
-                <Check className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                <Check className="h-5 w-5 shrink-0 mt-0.5" />
               ) : (
-                <X className="h-5 w-5 flex-shrink-0 mt-0.5" />
+                <X className="h-5 w-5 shrink-0 mt-0.5" />
               )}
               <div className="flex-1">
                 <p className="font-medium">{message.text}</p>
@@ -141,7 +220,7 @@ export default function ActivityFeedPage() {
           )}
 
           <div className="text-xs text-neutral-500 space-y-1">
-            <p>💡 <strong>Tip:</strong> Your Brand ID is in Supabase → brand_agent table</p>
+            <p>💡 <strong>Tip:</strong> Select a brand from the dropdown to get started</p>
             <p>🔧 <strong>Make sure:</strong> daily-poster service is running on port 8500</p>
           </div>
         </div>

@@ -130,9 +130,9 @@ export default function OnboardingPage() {
         }
       }
 
-      // Extract brand name from website or scraped data (limit to 255 chars)
-      const rawBrandName = scrapedSummary.split("\n")[0] || website.replace(/https?:\/\/(www\.)?/, "").split(".")[0];
-      const brandName = rawBrandName.substring(0, 255); // Limit to 255 characters
+      // Extract brand name from website domain (clean and simple)
+      const domainName = website.replace(/https?:\/\/(www\.)?/, "").split(".")[0].split("/")[0];
+      const brandName = domainName.charAt(0).toUpperCase() + domainName.slice(1); // Capitalize first letter
       const projectName = brandName || "My Brand";
 
       // Create brand_agent (project) in database
