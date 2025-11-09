@@ -253,9 +253,9 @@ export default function DashboardPage() {
             )}
             {engagement && engagement.total > 0 && (
               <div className="flex items-center gap-4 mt-2 text-xs text-neutral-500">
-                <span>❤️ {engagement.likes.toLocaleString()}</span>
-                <span>🔄 {engagement.retweets.toLocaleString()}</span>
-                <span>💬 {engagement.replies.toLocaleString()}</span>
+                <span>Likes: {engagement.likes.toLocaleString()}</span>
+                <span>Retweets: {engagement.retweets.toLocaleString()}</span>
+                <span>Replies: {engagement.replies.toLocaleString()}</span>
               </div>
             )}
           </div>

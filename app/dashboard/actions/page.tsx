@@ -31,21 +31,21 @@ type Action = {
 };
 
 const ACTION_TYPES = [
-  { value: "announcement", label: "📢 Announcement", emoji: "📢" },
-  { value: "engagement", label: "🎯 Engagement", emoji: "🎯" },
-  { value: "excitement", label: "🎉 Excitement", emoji: "🎉" },
-  { value: "promotion", label: "💼 Promotion", emoji: "💼" },
-  { value: "education", label: "📚 Education", emoji: "📚" },
-  { value: "community", label: "🤝 Community", emoji: "🤝" },
-  { value: "metrics", label: "📊 Metrics", emoji: "📊" },
+  { value: "announcement", label: "Announcement", emoji: "" },
+  { value: "engagement", label: "Engagement", emoji: "" },
+  { value: "excitement", label: "Excitement", emoji: "" },
+  { value: "promotion", label: "Promotion", emoji: "" },
+  { value: "education", label: "Education", emoji: "" },
+  { value: "community", label: "Community", emoji: "" },
+  { value: "metrics", label: "Metrics", emoji: "" },
 ];
 
 const TONE_OPTIONS = [
-  { value: "engaging", label: "🎯 Engaging" },
-  { value: "professional", label: "💼 Professional" },
-  { value: "casual", label: "😊 Casual" },
-  { value: "inspiring", label: "✨ Inspiring" },
-  { value: "humorous", label: "😄 Humorous" },
+  { value: "engaging", label: "Engaging" },
+  { value: "professional", label: "Professional" },
+  { value: "casual", label: "Casual" },
+  { value: "inspiring", label: "Inspiring" },
+  { value: "humorous", label: "Humorous" },
 ];
 
 export default function ActionsPage() {
@@ -94,17 +94,17 @@ export default function ActionsPage() {
 
     // Validate required fields
     if (!brandId) {
-      alert("❌ Error: No brand selected. Please select a project first.");
+      alert("Error: No brand selected. Please select a project first.");
       return;
     }
 
     if (!formData.title || formData.title.trim() === "") {
-      alert("❌ Error: Title is required. Please enter a goal/title for this action.");
+      alert("Error: Title is required. Please enter a goal/title for this action.");
       return;
     }
 
     if (!formData.actionType) {
-      alert("❌ Error: Action type is required.");
+      alert("Error: Action type is required.");
       return;
     }
 
@@ -132,7 +132,7 @@ export default function ActionsPage() {
       console.log("📥 Response:", data);
 
       if (data.success) {
-        alert("✅ Action created successfully!");
+        alert("Action created successfully!");
         setShowForm(false);
         setFormData({
           actionType: "announcement",
@@ -143,12 +143,12 @@ export default function ActionsPage() {
         });
         fetchActions();
       } else {
-        alert(`❌ Failed to create action: ${data.error || "Unknown error"}`);
+        alert(`Failed to create action: ${data.error || "Unknown error"}`);
         console.error("Create action error:", data);
       }
     } catch (error: any) {
       console.error("Create action exception:", error);
-      alert(`❌ Error: ${error.message || "Failed to create action. Check console for details."}`);
+      alert(`Error: ${error.message || "Failed to create action. Check console for details."}`);
     }
   };
 
@@ -212,7 +212,7 @@ export default function ActionsPage() {
       const data = await response.json();
 
       if (data.success) {
-        alert(`✅ Posted successfully!\n\n"${data.post_text}"`);
+        alert(`Posted successfully!\n\n"${data.post_text}"`);
         fetchActions();
       } else {
         alert(`Failed to post: ${data.error}`);
@@ -240,7 +240,7 @@ export default function ActionsPage() {
             )}
             {!brandId && (
               <span className="ml-2 text-xs text-red-600">
-                ⚠️ No brand selected - select a project first
+                No brand selected - select a project first
               </span>
             )}
           </p>
@@ -271,7 +271,7 @@ export default function ActionsPage() {
           {!brandId && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg">
               <p className="text-sm text-red-800 font-mono">
-                ⚠️ <strong>No brand selected!</strong> Please select a project from the top dropdown first.
+                <strong>No brand selected!</strong> Please select a project from the top dropdown first.
               </p>
             </div>
           )}
@@ -397,7 +397,7 @@ export default function ActionsPage() {
                         <div className="flex items-center gap-2 mb-1">
                           <span className="text-lg">
                             {ACTION_TYPES.find((t) => t.value === action.action_type)
-                              ?.emoji || "📝"}
+                              ?.emoji || ""}
                           </span>
                           <h3 className="font-mono font-semibold">
                             {action.title}
@@ -454,7 +454,7 @@ export default function ActionsPage() {
           {pausedActions.length > 0 && (
             <div>
               <h2 className="font-mono font-bold text-lg mb-3">
-                ⏸️ Paused ({pausedActions.length})
+                Paused ({pausedActions.length})
               </h2>
               <div className="space-y-3">
                 {pausedActions.map((action) => (
@@ -464,7 +464,7 @@ export default function ActionsPage() {
                         <div className="flex items-center gap-2 mb-1">
                           <span className="text-lg">
                             {ACTION_TYPES.find((t) => t.value === action.action_type)
-                              ?.emoji || "📝"}
+                              ?.emoji || ""}
                           </span>
                           <h3 className="font-mono font-semibold">
                             {action.title}
@@ -506,7 +506,7 @@ export default function ActionsPage() {
           {completedActions.length > 0 && (
             <div>
               <h2 className="font-mono font-bold text-lg mb-3">
-                ✅ Completed ({completedActions.length})
+                Completed ({completedActions.length})
               </h2>
               <div className="space-y-3">
                 {completedActions.map((action) => (
@@ -516,7 +516,7 @@ export default function ActionsPage() {
                         <div className="flex items-center gap-2 mb-1">
                           <span className="text-lg">
                             {ACTION_TYPES.find((t) => t.value === action.action_type)
-                              ?.emoji || "📝"}
+                              ?.emoji || ""}
                           </span>
                           <h3 className="font-mono font-semibold">
                             {action.title}

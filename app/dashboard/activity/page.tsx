@@ -111,7 +111,7 @@ export default function ActivityFeedPage() {
         setTweetUrl(data.tweet_url);
         setMessage({ 
           type: "success", 
-          text: "🎉 Post generated and published to X!" 
+          text: "Post generated and published to X!" 
         });
       } else {
         setGeneratedPost(data.post_text);
@@ -212,11 +212,11 @@ export default function ActivityFeedPage() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="engaging">🎯 Engaging - Hook readers with curiosity</SelectItem>
-                    <SelectItem value="professional">💼 Professional - Clear and authoritative</SelectItem>
-                    <SelectItem value="casual">😊 Casual - Friendly and conversational</SelectItem>
-                    <SelectItem value="inspiring">✨ Inspiring - Motivational and uplifting</SelectItem>
-                    <SelectItem value="humorous">😄 Humorous - Light and witty</SelectItem>
+                    <SelectItem value="engaging">Engaging - Hook readers with curiosity</SelectItem>
+                    <SelectItem value="professional">Professional - Clear and authoritative</SelectItem>
+                    <SelectItem value="casual">Casual - Friendly and conversational</SelectItem>
+                    <SelectItem value="inspiring">Inspiring - Motivational and uplifting</SelectItem>
+                    <SelectItem value="humorous">Humorous - Light and witty</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -276,8 +276,8 @@ export default function ActivityFeedPage() {
           )}
 
           <div className="text-xs text-neutral-500 space-y-1">
-            <p>💡 <strong>Tip:</strong> Be specific with your post idea - the more detail, the better the result!</p>
-            <p>🔧 <strong>Make sure:</strong> daily-poster service is running on port 8500</p>
+            <p><strong>Tip:</strong> Be specific with your post idea - the more detail, the better the result!</p>
+            <p><strong>Make sure:</strong> daily-poster service is running on port 8500</p>
           </div>
         </div>
       </Card>

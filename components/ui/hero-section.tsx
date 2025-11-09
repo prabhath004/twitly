@@ -89,7 +89,7 @@ export default function HeroSection() {
         </nav>
 
         <div className="flex items-center gap-2 border border-slate-300 hover:border-[#1D9BF0]/50 rounded-full w-max mx-auto px-4 py-2 mt-40 md:mt-32 transition-colors">
-          <span className="font-mono text-sm">AI Agent for X, Reddit, and WhatsApp</span>
+          <span className="font-mono text-sm">AI Agent for Social Media</span>
           <button className="flex items-center gap-1 font-medium font-mono text-[#1D9BF0]">
             <span>Learn more</span>
             <svg width="19" height="19" viewBox="0 0 19 19" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
@@ -99,11 +99,11 @@ export default function HeroSection() {
         </div>
 
         <h1 className="text-4xl md:text-7xl font-bold max-w-[950px] text-center mx-auto mt-8 font-mono leading-tight">
-          Turn Your X and Reddit Accounts Into an AI-Powered Brand Manager
+          Automate your social presence. Stay active, authentic, and on-brand — 24/7.
         </h1>
 
         <p className="text-sm md:text-base mx-auto max-w-2xl text-center mt-6 max-md:px-2 font-mono text-muted-foreground">
-          BrandPilot watches, replies, and posts in your voice — with optional WhatsApp approvals. Never miss an engagement opportunity.
+          BrandPilot watches, replies, and posts in your voice. Never miss an engagement opportunity.
         </p>
 
         <div className="mx-auto w-full flex items-center justify-center gap-3 mt-8">

@@ -129,13 +129,14 @@ export function createSupabaseClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  // During build time (Vercel), return a mock client if env vars are missing
-  // This allows the build to succeed, but you MUST add env vars in Vercel for runtime
-  const isBuildTime = process.env.VERCEL === '1' || process.env.NEXT_PHASE === 'phase-production-build';
-  if (isBuildTime && (!supabaseUrl || !supabaseAnonKey)) {
-    console.warn('⚠️  Supabase env vars missing during build. Using placeholder values.');
-    console.warn('⚠️  Please add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in Vercel settings!');
-    // Return a client with placeholder values - will fail at runtime if actually used
+  // If env vars are missing, return a client that will show a helpful error
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.error('❌ Missing Supabase environment variables!');
+    console.error('   Please add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in Vercel settings.');
+    console.error('   Go to: Vercel Dashboard → Your Project → Settings → Environment Variables');
+    
+    // Return a client with placeholder values - API calls will fail gracefully
+    // This prevents the app from crashing, but features won't work
     return createClient<Database>(
       'https://placeholder.supabase.co',
       'placeholder-key',
@@ -145,12 +146,6 @@ export function createSupabaseClient() {
           autoRefreshToken: true,
         },
       }
-    );
-  }
-
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error(
-      'Missing Supabase environment variables. Please check your .env.local file.'
     );
   }
 
@@ -167,12 +162,12 @@ export function createSupabaseServerClient() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  // During build time (Vercel), return a mock client if env vars are missing
-  // This allows the build to succeed, but you MUST add env vars in Vercel for runtime
-  const isBuildTime = process.env.VERCEL === '1' || process.env.NEXT_PHASE === 'phase-production-build';
-  if (isBuildTime && (!supabaseUrl || !supabaseAnonKey)) {
-    console.warn('⚠️  Supabase env vars missing during build. Using placeholder values.');
-    console.warn('⚠️  Please add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in Vercel settings!');
+  // If env vars are missing, return a client that will fail gracefully
+  if (!supabaseUrl || !supabaseAnonKey) {
+    console.error('❌ Missing Supabase environment variables!');
+    console.error('   Please add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in Vercel settings.');
+    
+    // Return a client with placeholder values - API calls will fail gracefully
     return createClient<Database>(
       'https://placeholder.supabase.co',
       'placeholder-key',
@@ -182,12 +177,6 @@ export function createSupabaseServerClient() {
           autoRefreshToken: false,
         },
       }
-    );
-  }
-
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error(
-      'Missing Supabase environment variables. Please check your .env.local file.'
     );
   }
 

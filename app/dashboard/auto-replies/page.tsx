@@ -545,8 +545,8 @@ export default function AutoRepliesPage() {
                               </a>
                             )}
                             <div className="flex items-center gap-3 text-neutral-500">
-                              {activity.likes > 0 && <span>❤️ {activity.likes}</span>}
-                              {activity.retweets > 0 && <span>🔄 {activity.retweets}</span>}
+                              {activity.likes > 0 && <span>Likes: {activity.likes}</span>}
+                              {activity.retweets > 0 && <span>Retweets: {activity.retweets}</span>}
                             </div>
                           </div>
                         </div>
@@ -678,19 +678,19 @@ export default function AutoRepliesPage() {
                   </div>
                   <div className="flex gap-4 mt-3 pt-3 border-t border-neutral-200 dark:border-neutral-700">
                     <div className="flex items-center gap-1">
-                      <span className="text-xs text-neutral-500">❤️</span>
+                      <span className="text-xs text-neutral-500">Likes</span>
                       <span className="text-sm font-semibold">{reply.likes_count || 0}</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className="text-xs text-neutral-500">🔄</span>
+                      <span className="text-xs text-neutral-500">RT</span>
                       <span className="text-sm font-semibold">{reply.retweets_count || 0}</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className="text-xs text-neutral-500">💬</span>
+                      <span className="text-xs text-neutral-500">Replies</span>
                       <span className="text-sm font-semibold">{reply.replies_count || 0}</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <span className="text-xs text-neutral-500">👁️</span>
+                      <span className="text-xs text-neutral-500">Views</span>
                       <span className="text-sm font-semibold">{reply.views_count || 0}</span>
                     </div>
                   </div>
