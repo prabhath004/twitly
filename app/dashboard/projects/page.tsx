@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Globe, Sparkles, Shield, Plus, Trash2, Edit2 } from "lucide-react";
 import { SummarizedText } from "@/components/summarized-text";
+import { ProjectSelector } from "@/components/ui/project-selector";
 
 export default function ProjectsPage() {
   const router = useRouter();
@@ -85,6 +86,18 @@ export default function ProjectsPage() {
         </Button>
       </div>
 
+      {/* Project Selector Dropdown */}
+      {projects.length > 0 && (
+        <div className="flex items-center gap-3">
+          <Label htmlFor="project-selector" className="font-mono text-sm text-neutral-600 whitespace-nowrap">
+            Select Project:
+          </Label>
+          <div className="flex-1 max-w-md">
+            <ProjectSelector />
+          </div>
+        </div>
+      )}
+
       {/* Projects Grid */}
       <div className="grid gap-6">
         {projects.filter((project) => project.id === currentProjectId).length === 0 ? (
@@ -93,7 +106,7 @@ export default function ProjectsPage() {
               <p className="font-mono text-neutral-600 mb-4">
                 {projects.length === 0 
                   ? "No projects yet. Create your first project to get started."
-                  : "Select a project from the dropdown above to view details."}
+                  : "Select a project from the dropdown above to view and edit details."}
               </p>
               {projects.length === 0 && (
                 <Button

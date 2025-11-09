@@ -6,19 +6,39 @@ const openai = new OpenAI({
 });
 
 export async function POST(request: NextRequest) {
+  // Parse request body once at the start
+  let text: string;
+  let maxLength: number;
+  
   try {
-    const { text, maxLength = 100 } = await request.json();
+    const body = await request.json();
+    text = body.text;
+    maxLength = body.maxLength || 100;
+  } catch (error) {
+    return NextResponse.json(
+      { error: "Invalid request body" },
+      { status: 400 }
+    );
+  }
 
-    if (!text || typeof text !== "string") {
-      return NextResponse.json(
-        { error: "Text is required" },
-        { status: 400 }
-      );
-    }
+  if (!text || typeof text !== "string") {
+    return NextResponse.json(
+      { error: "Text is required" },
+      { status: 400 }
+    );
+  }
 
-    // If text is already short enough, just return it
-    if (text.length <= maxLength) {
-      return NextResponse.json({ summary: text });
+  // If text is already short enough, just return it
+  if (text.length <= maxLength) {
+    return NextResponse.json({ summary: text });
+  }
+
+  try {
+    // Check if OpenAI API key is available
+    if (!process.env.OPENAI_API_KEY) {
+      console.warn("OPENAI_API_KEY not set, using fallback truncation");
+      const fallback = text.substring(0, maxLength) + (text.length > maxLength ? "..." : "");
+      return NextResponse.json({ summary: fallback });
     }
 
     // Use OpenAI to generate a concise summary
@@ -45,9 +65,7 @@ export async function POST(request: NextRequest) {
     console.error("Error summarizing text:", error);
 
     // Fallback: just truncate if OpenAI fails
-    const { text, maxLength = 100 } = await request.json();
     const fallback = text.substring(0, maxLength) + (text.length > maxLength ? "..." : "");
-
     return NextResponse.json({ summary: fallback });
   }
 }

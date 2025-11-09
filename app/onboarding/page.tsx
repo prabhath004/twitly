@@ -264,7 +264,7 @@ export default function OnboardingPage() {
                   {importing ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Analyzing with Claude...
+                      Analyzing...
                     </>
                   ) : (
                     "Extract Brand Info"
@@ -335,7 +335,7 @@ export default function OnboardingPage() {
               <div className="space-y-6">
                 <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg">
                   <p className="text-sm font-mono text-blue-900">
-                    <strong>Complete your brand profile</strong> to enable Claude to generate authentic, on-brand content tailored to your business
+                    <strong>Complete your brand profile</strong> to enable AI to generate authentic, on-brand content tailored to your business
                   </p>
                 </div>
 
@@ -497,11 +497,11 @@ export default function OnboardingPage() {
                   </div>
                 </div>
 
-                {/* SECTION 6: Answer Website Analysis Questions */}
+                {/* SECTION 6: Brand Questions */}
                 {suggestedQuestions.length > 0 && (
                   <div className="border-t pt-6">
-                    <h3 className="font-mono font-semibold text-base mb-4 text-neutral-900">Website Analysis Questions</h3>
-                    <p className="text-xs font-mono text-neutral-500 mb-4">Based on our analysis of your website, answer these questions to help us understand your brand better</p>
+                    <h3 className="font-mono font-semibold text-base mb-4 text-neutral-900">Brand Questions</h3>
+                    <p className="text-xs font-mono text-neutral-500 mb-4">Answer these questions to help us understand your brand better</p>
                     <div className="space-y-6">
                       {suggestedQuestions.map((question, index) => {
                         // Define dropdown options for each question
@@ -547,44 +547,54 @@ export default function OnboardingPage() {
                               Q{index + 1}: {question}
                             </Label>
                             {index === 2 ? (
-                              // Multi-select for question 3
+                              // Multi-select for question 3 (allow multiple selections)
                               <div className="grid grid-cols-2 gap-3">
-                                {options.map((option) => (
-                                  <div key={option} className="flex items-center">
-                                    <input
-                                      type="checkbox"
-                                      id={`q${index}_${option}`}
-                                      value={option}
-                                      checked={
-                                        questionResponses[`question_${index}`]
-                                          ?.split(",")
-                                          .includes(option) || false
-                                      }
-                                      onChange={(e) => {
-                                        const currentValue = questionResponses[`question_${index}`] || "";
-                                        const currentOptions = currentValue
-                                          ? currentValue.split(",").map((s) => s.trim())
-                                          : [];
+                                {options.map((option) => {
+                                  const currentValue = questionResponses[`question_${index}`] || "";
+                                  const currentOptions = currentValue
+                                    ? currentValue.split(",").map((s) => s.trim()).filter(Boolean)
+                                    : [];
+                                  const isChecked = currentOptions.includes(option);
 
-                                        let newOptions: string[];
-                                        if (e.target.checked) {
-                                          newOptions = [...currentOptions, option];
-                                        } else {
-                                          newOptions = currentOptions.filter((o) => o !== option);
-                                        }
+                                  return (
+                                    <div key={option} className="flex items-center">
+                                      <input
+                                        type="checkbox"
+                                        id={`q${index}_${option}`}
+                                        value={option}
+                                        checked={isChecked}
+                                        onChange={(e) => {
+                                          const currentValue = questionResponses[`question_${index}`] || "";
+                                          const currentOptions = currentValue
+                                            ? currentValue.split(",").map((s) => s.trim()).filter(Boolean)
+                                            : [];
 
-                                        setQuestionResponses({
-                                          ...questionResponses,
-                                          [`question_${index}`]: newOptions.join(", "),
-                                        });
-                                      }}
-                                      className="w-4 h-4 cursor-pointer"
-                                    />
-                                    <label htmlFor={`q${index}_${option}`} className="ml-2 text-sm font-mono cursor-pointer">
-                                      {option}
-                                    </label>
-                                  </div>
-                                ))}
+                                          let newOptions: string[];
+                                          if (e.target.checked) {
+                                            // Add option if not already present
+                                            if (!currentOptions.includes(option)) {
+                                              newOptions = [...currentOptions, option];
+                                            } else {
+                                              newOptions = currentOptions;
+                                            }
+                                          } else {
+                                            // Remove option
+                                            newOptions = currentOptions.filter((o) => o !== option);
+                                          }
+
+                                          setQuestionResponses({
+                                            ...questionResponses,
+                                            [`question_${index}`]: newOptions.join(", "),
+                                          });
+                                        }}
+                                        className="w-4 h-4 cursor-pointer"
+                                      />
+                                      <label htmlFor={`q${index}_${option}`} className="ml-2 text-sm font-mono cursor-pointer">
+                                        {option}
+                                      </label>
+                                    </div>
+                                  );
+                                })}
                               </div>
                             ) : (
                               // Single select dropdown for questions 1 and 2

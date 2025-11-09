@@ -98,12 +98,8 @@ export default function HeroSection() {
           </button>
         </div>
 
-        <h1 className="text-4xl md:text-7xl font-bold max-w-[950px] text-center mx-auto mt-8 font-mono leading-tight">
-          Turn Your X and Reddit Accounts Into an AI-Powered Brand Manager
-        </h1>
-
-        <p className="text-sm md:text-base mx-auto max-w-2xl text-center mt-6 max-md:px-2 font-mono text-muted-foreground">
-          BrandPilot watches, replies, and posts in your voice — with optional WhatsApp approvals. Never miss an engagement opportunity.
+        <p className="text-4xl md:text-6xl font-bold mx-auto max-w-3xl text-center mt-16 md:mt-20 max-md:px-4 font-mono text-neutral-900 leading-tight">
+          Automate your social presence. Stay active, authentic, and on-brand — 24/7.
         </p>
 
         <div className="mx-auto w-full flex items-center justify-center gap-3 mt-8">
