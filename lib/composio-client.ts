@@ -1,12 +1,26 @@
 import { Composio } from "@composio/core";
 
-// Initialize Composio client with API key and toolkit versions
-export const composioClient = new Composio({
-  apiKey: process.env.COMPOSIO_API_KEY,
-  // Specify toolkit versions for manual tool execution
-  toolkitVersions: {
-    twitter: "20251024_00", // Version from Composio Playground
-    reddit: "20251024_00",  // Reddit version (same as Twitter)
+// Lazy initialization of Composio client to avoid build-time errors
+let composioClientInstance: Composio | null = null;
+
+function getComposioClient(): Composio {
+  if (!composioClientInstance) {
+    composioClientInstance = new Composio({
+      apiKey: process.env.COMPOSIO_API_KEY,
+      // Specify toolkit versions for manual tool execution
+      toolkitVersions: {
+        twitter: "20251024_00", // Version from Composio Playground
+        reddit: "20251024_00",  // Reddit version (same as Twitter)
+      },
+    });
+  }
+  return composioClientInstance;
+}
+
+// Export a getter function instead of direct instance
+export const composioClient = new Proxy({} as Composio, {
+  get(_target, prop) {
+    return getComposioClient()[prop as keyof Composio];
   },
 });
 
