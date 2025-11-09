@@ -2,12 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Twitter, Home, Activity, Send, Settings, Plug, HelpCircle, LogOut } from "lucide-react";
+import { Twitter, Home, Activity, Send, Settings, Plug, HelpCircle, LogOut, Target } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const navItems = [
   { icon: Home, label: "Dashboard", href: "/dashboard" },
   { icon: Activity, label: "Activity Feed", href: "/dashboard/activity" },
+  { icon: Target, label: "Actions", href: "/dashboard/actions" },
   { icon: Send, label: "Posts", href: "/dashboard/posts" },
   { icon: Settings, label: "Settings", href: "/dashboard/settings" },
   { icon: Plug, label: "Integrations", href: "/dashboard/integrations" },
