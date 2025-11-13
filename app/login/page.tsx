@@ -16,6 +16,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
   // Check if user is already logged in and redirect to dashboard
   useEffect(() => {
@@ -24,12 +25,15 @@ export default function LoginPage() {
       const { data: { session } } = await supabase.auth.getSession();
 
       if (session) {
-        router.push("/dashboard");
+        // Use window.location for full page reload to ensure middleware runs
+        window.location.href = "/dashboard";
+      } else {
+        setIsCheckingAuth(false);
       }
     };
 
     checkAuth();
-  }, [router]);
+  }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,14 +65,20 @@ export default function LoginPage() {
       if (signInError) throw signInError;
 
       if (data.session) {
+        console.log("✅ Login successful, setting cookie and redirecting...");
         // Set cookie manually to ensure middleware can read it (MUST match middleware cookie name)
         document.cookie = `sb-access-token=${data.session.access_token}; path=/; max-age=604800; SameSite=Lax`;
 
         // Small delay to ensure cookie is set
         await new Promise(resolve => setTimeout(resolve, 100));
 
+        console.log("🔄 Redirecting to dashboard...");
         // Redirect using window.location for a full page reload
         window.location.href = "/dashboard";
+      } else {
+        console.error("❌ No session returned after login");
+        setError("Login failed - no session created");
+        setLoading(false);
       }
     } catch (err: any) {
       setError(err.message || "Failed to log in. Please check your credentials.");
@@ -76,6 +86,18 @@ export default function LoginPage() {
       setLoading(false);
     }
   };
+
+  // Show loading state while checking auth
+  if (isCheckingAuth) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-neutral-50 to-white flex items-center justify-center p-4">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1D9BF0] mx-auto mb-4"></div>
+          <p className="text-sm text-neutral-600 font-mono">Checking authentication...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-neutral-50 to-white flex items-center justify-center p-4">
